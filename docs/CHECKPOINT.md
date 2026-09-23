@@ -2,152 +2,119 @@
 
 Updated: 2026-09-23
 
-Current milestone: backend M1.1 — проверка неоднозначных входных данных
+Current milestone: backend M2.1 — хранение, вход и защищённый API
 
 ## Goal
 
-Минимально закрыть замечания независимой проверки M1: отклонять повторяющиеся
-JSON-ключи, повторяющиеся CSV-заголовки и неконечный `duration_hours`, не меняя
-расчётный engine, API-контракты или scope MVP.
+Сохранить расчёты M1 и добавить PostgreSQL, сессии Employee/HR, выполнение
+активности и HR import/overview. AI и frontend в этот этап не входят.
 
 ## Done
 
-- Проверенный fix `f09147b9a8c0967cf3b7b051daae312de231dd9a`
-  fast-forwarded в отдельный detached integration worktree от `cc9deae`.
-- Независимый code review ChatGPT для `f09147b` завершён со статусом PASS.
-  Независимый повтор полного тестового запуска ChatGPT не выполнялся.
-- До исправления 6 новых regression cases воспроизвели молчаливое принятие
-  duplicate JSON keys, duplicate CSV headers и неконечных чисел.
-- JSON loader отклоняет повторный ключ на любой глубине объекта и сообщает имя
-  файла, поле `json` и повторившийся ключ.
-- CSV loader проверяет уникальность заголовков до чтения строк; корректная
-  обработка пустых optional fields сохранена.
-- `duration_hours` принимает только конечное положительное число; `NaN`,
-  `Infinity`, `-Infinity` и overflow вида `1e400` отклоняются.
-- `engine.py`, правила карьерного развития, зависимости и API не менялись.
-- Frontend разрабатывается отдельно; его состояние M1.1 не проверяет и не
-  подтверждает.
+- База ветки: `3ed7fd7357442199d31eabbe20bfc6738df9e44a`.
+- Loader и engine не переписывались. Новый слой вызывает их расчёты.
+- Добавлены SQLAlchemy/Alembic-схема, seed, сессии, CSRF и маршруты из
+  `docs/API.md`.
+- Новые завершения отделены от исторического replay и применяются даже если
+  `last_review_date` совпадает с бизнес-датой.
+- Повторный `Idempotency-Key` и повтор scheduled-сессии `EV_036` покрыты
+  policy-тестами.
+- Исходный dataset не изменяется и не коммитится.
 
-## Current architecture
+## Verification
 
-```text
-JSON/CSV dataset path
-  → validated loader
-  → pure Python calculation engine
-  → diagnostic CLI
-
-FastAPI
-  → GET /api/health only
-```
-
-Расчётный модуль не зависит от FastAPI, БД и AI. Текущий стек этапа:
-Python 3.10+, FastAPI 0.116.1, Uvicorn 0.35.0, pytest 8.4.1 и HTTPX 0.28.1.
-
-## Changed files
-
-- `backend/career_quest/loader.py`
-- `tests/test_loader_cli.py`
-- `README.md`
-- `AGENTS.md`
-- `docs/PROJECT.md`
-- `docs/CHECKPOINT.md`
-
-## How to verify
-
-Установка:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-```
-
-Синтетические тесты:
+Локальный запуск Cursor на Python 3.12.7:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Фактический локальный запуск Cursor в integration worktree: `23 passed`; есть
-одно предупреждение о deprecated alias внутри Starlette TestClient/AnyIO, не в
-коде проекта.
+Результат: `30 passed, 5 skipped`. Пять PostgreSQL-тестов пропущены, потому что
+локальный PostgreSQL и `DATABASE_URL` отсутствуют. Их нельзя считать
+пройденными.
 
-Официальный dataset:
+Python 3.10: NOT TESTED.
 
-```powershell
-$DATASET = "C:\path\to\career_quest_dataset"
-.\.venv\Scripts\python.exe -m backend.career_quest.cli $DATASET E0001 --audit
+Официальный dataset smoke повторно дал 318 применимых completed, 111
+сотрудников с приростом, 308 trace и суммарный прирост 308. Это проверка
+прежнего расчётного ядра, а не PostgreSQL.
+
+DB ACCESS: BLOCKED. Транзакции, сохранение после перезапуска backend и
+параллельные completion на PostgreSQL: NOT RUN.
+
+Независимый code review ChatGPT для M1/M1.1 остаётся прежним. M2.1 его ещё не
+проходил. Независимый повтор тестового запуска ChatGPT не заявлялся.
+
+## Current architecture
+
+```text
+dataset files → loader/engine
+PostgreSQL → accounts, sessions, employees, history, idempotency
+HTTP API → auth, employee workflow, HR overview/import
 ```
 
-Smoke-check исходного неизменённого набора успешно подтвердил:
+AI не подключён. Frontend выполняется отдельно и здесь не проверялся.
 
-- 60 skills, 32 role profiles, 200 employees, 40 events, 2 743 history records;
-- окно истории `2024-10-01`–`2026-09-30`;
-- статусы: 2 178 completed, 16 in_progress, 160 dropped, 195 no_show,
-  104 declined, 90 overdue;
-- заново рассчитано 318 completed-записей после review до бизнес-даты;
-- положительный прирост получили 111 сотрудников;
-- 308 положительных trace-записей, суммарный прирост уровней 308.
+## Changed files
 
-Эти значения повторно получены локальным запуском Cursor на интегрированном
-коде M1.1, а не скопированы из research.
-
-Health:
-
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn backend.career_quest.api:app --host 127.0.0.1 --port 8000
-Invoke-RestMethod http://127.0.0.1:8000/api/health
-```
+- `backend/career_quest/api.py`
+- `backend/career_quest/errors.py`
+- `backend/career_quest/http_api.py`
+- `backend/career_quest/orm.py`
+- `backend/career_quest/security.py`
+- `backend/career_quest/serve.py`
+- `backend/career_quest/settings.py`
+- `backend/career_quest/store.py`
+- `backend/career_quest/workflow.py`
+- `alembic.ini`
+- `alembic/env.py`
+- `alembic/versions/20260923_0001_initial.py`
+- `requirements.txt`
+- `.env.example`
+- `tests/test_api.py`
+- `tests/test_m2_policy.py`
+- `tests/test_postgres_workflow.py`
+- `README.md`
+- `AGENTS.md`
+- `docs/API.md`
+- `docs/PROJECT.md`
+- `docs/CHECKPOINT.md`
 
 ## Git
 
-Integration worktree: detached HEAD от `origin/main`
+Branch: `feat/backend-m2-api`
 
-Base commit: `cc9deae81f52544bac1541f0c81f7a0ff129a1fd`
+Base commit: `3ed7fd7357442199d31eabbe20bfc6738df9e44a`
 
-Included fix SHA: `f09147b9a8c0967cf3b7b051daae312de231dd9a`
+Commit message: `feat: add persistent employee workflow and protected API`
 
-Integration commit message: `docs: record backend M1.1 verification`
+Pushed: YES, только `origin/feat/backend-m2-api`.
 
-Pushed: YES, `HEAD:main` без force push.
+Интеграция в `main`: не выполнена.
 
-REPO VERIFY: PENDING — интеграционный commit после push ожидает проверки
-ChatGPT.
+REPO VERIFY: PENDING — commit после push ожидает независимой проверки ChatGPT.
 
 ## Deploy
 
-URL: отсутствует
-
-Status: не выполнялся. VPS, серверная PostgreSQL и DNS не изменялись.
+Не выполнялся. VPS, серверная БД, DNS и Nginx не изменялись.
 
 ## Known issues
 
-- Локальная проверка выполнена на Python 3.12.7.
-- Python 3.10: NOT TESTED — этот runtime отсутствует на машине.
-- Полный однокомандный запуск, требуемый Halyk, ещё не реализован.
-- Frontend выполняется в отдельной ветке/worktree; его готовность не проверена.
-- JSON/CSV сущности англоязычные; RU/KZ находятся только в README dataset.
-- Исходные повторы `EV_001`–`EV_003` после completed сохранены без исправления.
-- Числовые веса, подробная схема БД и точный OpenAI model ID не утверждены.
-- Health не означает готовность persistence, auth, AI или полного MVP.
+- DB ACCESS: BLOCKED; нужен локальный PostgreSQL для `career_quest_dev` или
+  `career_quest_test`.
+- PostgreSQL durability/concurrency: NOT RUN.
+- Python 3.10: NOT TESTED.
+- Полный однокомандный запуск сайта не реализован.
+- Frontend не проверялся.
+- Числовые веса ранжирования и точный AI model ID не утверждены.
 
 ## Decisions
 
-- Продукт: карьерный навигатор Employee с отдельной HR-аналитикой и без
-  публичного рейтинга.
-- Стек: FastAPI + React/Vite + PostgreSQL; production Nginx + systemd без
-  Docker.
-- Одно адаптивное русскоязычное веб-приложение; без PWA и native apps сейчас.
-- Предсозданные Employee/HR accounts и серверная проверка прав; auth следующим
-  этапом.
-- Основная цель — следующий грейд текущей роли; cross-role `career_goal`
-  показывается отдельно; автоматического повышения нет.
-- OpenAI позже сравнивает только допустимые факты; model ID конфигурируется и
-  проверяется при интеграции; embeddings/vector DB/custom training не нужны.
-- Канонический README русский, KZ/EN версии отложены до финала; все затронутые
-  технические документы обновляются.
+Утверждённые решения M1 сохранены: следующий грейд текущей роли, без
+автоматического повышения, без рекомендации mandatory и без подмены цели
+межролевым `career_goal`.
 
 ## Next
 
-Независимо проверить интеграционный commit в `main`. Следующий backend-этап:
-persistence/API/auth/AI. Frontend продолжает свой отдельный согласованный этап;
-его готовность здесь не проверялась.
+Подключить AI к уже допустимым candidate facts, затем соединить проверенный
+backend с отдельным frontend и настроить полный запуск.

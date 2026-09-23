@@ -18,8 +18,12 @@ python -m venv .venv
 ```powershell
 .\.venv\Scripts\python.exe -m backend.career_quest.cli DATASET_PATH EMPLOYEE_ID
 .\.venv\Scripts\python.exe -m backend.career_quest.cli DATASET_PATH --audit
-.\.venv\Scripts\python.exe -m uvicorn backend.career_quest.api:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m backend.career_quest.serve
 ```
+
+`serve` требует локальные `DATABASE_URL`, `DATASET_PATH` и демо-учётные записи.
+Без `DATABASE_URL` PostgreSQL-тесты пропускаются и не считаются пройденными.
+Контракт API: `docs/API.md`.
 
 ## Ограничения
 

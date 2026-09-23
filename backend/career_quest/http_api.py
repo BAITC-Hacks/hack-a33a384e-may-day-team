@@ -171,8 +171,8 @@ def demo_login(
             "Demo login is not configured.",
         )
     if body.role == "employee":
-        username = demo.employee_one_username
-        password = demo.employee_one_password
+        username = demo.employee_two_username
+        password = demo.employee_two_password
     else:
         username = demo.hr_username
         password = demo.hr_password

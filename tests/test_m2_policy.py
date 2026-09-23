@@ -242,7 +242,7 @@ def test_demo_login_uses_configured_accounts_and_session_contract(
     client = _client(store, _settings(_demo_accounts()))
 
     for role, username, employee_id in (
-        ("employee", "employee.a", "EMP-new-alpha"),
+        ("employee", "employee.b", "LEAD-custom"),
         ("hr", "hr.user", None),
     ):
         response = client.post("/api/auth/demo-login", json={"role": role})
@@ -301,8 +301,8 @@ def test_demo_login_fails_safely_when_not_configured_or_role_mismatches(
 
     mismatched = replace(
         _demo_accounts(),
-        employee_one_username="hr.user",
-        employee_one_id="not-used",
+        employee_two_username="hr.user",
+        employee_two_id="not-used",
     )
     client = _client(store, _settings(mismatched))
     response = client.post("/api/auth/demo-login", json={"role": "employee"})

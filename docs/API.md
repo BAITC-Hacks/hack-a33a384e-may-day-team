@@ -124,6 +124,33 @@ Employee получает только свой ID. HR получает любо
 
 Порядок массива не является AI-рекомендацией и не выбирает первые три элемента.
 
+`GET /api/employees/{employee_id}/recommendations` выбирает 1–3 занятия только
+из этого списка. Модель не присылает уровни и не создаёт активности. Сервер
+оставляет каталожные `title`, `format` и `upcoming_sessions`.
+
+```json
+{
+  "used_ai": true,
+  "selection_status": "selected",
+  "fallback_reason": null,
+  "model": "gpt-4o-mini",
+  "candidate_status": "candidates_available",
+  "recommendations": [{
+    "event_id": "EV_EXAMPLE",
+    "title": "Synthetic activity",
+    "format": "offline",
+    "upcoming_sessions": ["2026-01-20"],
+    "why": "Закрывает критический разрыв.",
+    "alternative_event_id": "EV_OTHER",
+    "why_not_alternative": "Слабее закрывает тот же разрыв."
+  }]
+}
+```
+
+Если ответа нет или в нём чужой `event_id`, результат явный:
+`used_ai=false`, `selection_status=fallback`, `recommendations=[]`.
+Пустой список кандидатов не вызывает модель: `selection_status=not_applicable`.
+
 ## Выполнение
 
 `POST /api/employees/{employee_id}/activities/{event_id}/complete`

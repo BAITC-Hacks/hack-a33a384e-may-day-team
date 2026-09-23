@@ -63,7 +63,9 @@ PostgreSQL → accounts, sessions, employees, history, idempotency
 HTTP API → auth, employee workflow, HR overview/import
 ```
 
-AI не подключён. Frontend выполняется отдельно и здесь не проверялся.
+OpenAI выбирает 1–3 занятия только из допустимых фактов. Живой вызов для одного
+сотрудника вернул `used_ai=true`, модель `gpt-4o-mini`. Неверный `event_id`
+в тестах даёт `fallback`. Frontend выполняется отдельно и здесь не проверялся.
 
 ## Changed files
 
@@ -126,5 +128,5 @@ REPO VERIFY: PENDING — commit после push ожидает независи�
 
 ## Next
 
-Подключить AI к уже допустимым candidate facts, затем соединить проверенный
-backend с отдельным frontend и настроить полный запуск.
+Соединить проверенный backend с отдельным frontend и настроить полный запуск.
+Ключ OpenAI лежит только в локальном `.env`.

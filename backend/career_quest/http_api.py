@@ -194,6 +194,16 @@ def employee_candidates(
     return store.candidates(employee_id)
 
 
+@router.get("/api/employees/{employee_id}/recommendations")
+def employee_recommendations(
+    employee_id: str,
+    actor: Actor = Depends(get_actor),
+    store: PostgresStore = Depends(get_store),
+) -> dict[str, object]:
+    _own_employee(actor, employee_id)
+    return store.recommendations(employee_id)
+
+
 @router.post("/api/employees/{employee_id}/activities/{event_id}/complete")
 def complete_activity(
     employee_id: str,

@@ -23,6 +23,7 @@ from .orm import (
 )
 from .security import hash_password, hash_token, new_token, verify_password
 from .settings import DEMO_VARIABLES, Settings, assert_safe_database
+from .ai_select import select_recommendations
 from .workflow import (
     CompletionOutcome,
     EmployeeState,
@@ -150,6 +151,15 @@ class PostgresStore:
     def candidates(self, employee_id: str) -> dict[str, object]:
         with self.session_factory() as session:
             return build_candidates(self._state(session, employee_id))
+
+    def recommendations(self, employee_id: str) -> dict[str, object]:
+        facts = self.candidates(employee_id)
+        return select_recommendations(
+            facts,
+            api_key=self.settings.openai_api_key,
+            model=self.settings.openai_model,
+            timeout_seconds=self.settings.openai_timeout_seconds,
+        )
 
     def employees(self) -> list[dict[str, object]]:
         with self.session_factory() as session:

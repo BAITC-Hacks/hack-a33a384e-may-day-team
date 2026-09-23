@@ -41,6 +41,9 @@ class Settings:
     cookie_secure: bool
     session_ttl_hours: int
     demo_accounts: DemoAccounts | None
+    openai_api_key: str | None
+    openai_model: str
+    openai_timeout_seconds: float
 
 
 def load_local_env() -> None:
@@ -77,6 +80,21 @@ def load_settings() -> Settings:
             "configuration_error",
             "SESSION_TTL_HOURS must be positive.",
         )
+    timeout_text = os.environ.get("OPENAI_TIMEOUT_SECONDS", "8")
+    try:
+        timeout = float(timeout_text)
+    except ValueError as exc:
+        raise WorkflowError(
+            500,
+            "configuration_error",
+            "OPENAI_TIMEOUT_SECONDS must be a number.",
+        ) from exc
+    if timeout <= 0:
+        raise WorkflowError(
+            500,
+            "configuration_error",
+            "OPENAI_TIMEOUT_SECONDS must be positive.",
+        )
     return Settings(
         database_url=os.environ.get("DATABASE_URL") or None,
         dataset_path=os.environ.get("DATASET_PATH") or None,
@@ -85,6 +103,9 @@ def load_settings() -> Settings:
         == "true",
         session_ttl_hours=ttl,
         demo_accounts=_demo_accounts(),
+        openai_api_key=os.environ.get("OPENAI_API_KEY") or None,
+        openai_model=os.environ.get("OPENAI_MODEL") or "gpt-4o-mini",
+        openai_timeout_seconds=timeout,
     )
 
 

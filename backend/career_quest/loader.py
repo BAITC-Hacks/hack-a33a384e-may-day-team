@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -49,17 +50,44 @@ class DatasetValidationError(ValueError):
         )
 
 
+class _DuplicateJsonKeyError(ValueError):
+    def __init__(self, key: str):
+        self.key = key
+        super().__init__(key)
+
+
 def _error(file_name: str, record: str, field: str, reason: str) -> None:
     raise DatasetValidationError(file_name, record, field, reason)
+
+
+def _reject_duplicate_json_keys(
+    pairs: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise _DuplicateJsonKeyError(key)
+        value[key] = item
+    return value
 
 
 def _read_json(dataset_path: Path, file_name: str) -> dict[str, Any]:
     path = dataset_path / file_name
     try:
         with path.open(encoding="utf-8-sig") as source:
-            value = json.load(source)
+            value = json.load(
+                source,
+                object_pairs_hook=_reject_duplicate_json_keys,
+            )
     except FileNotFoundError:
         _error(file_name, "$", "file", f"file not found under {dataset_path}")
+    except _DuplicateJsonKeyError as exc:
+        _error(
+            file_name,
+            "$",
+            "json",
+            f"duplicate JSON object key {exc.key!r}",
+        )
     except json.JSONDecodeError as exc:
         _error(
             file_name,
@@ -127,7 +155,13 @@ def _number(
 ) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         _error(file_name, record, field, "must be a number")
-    return float(value)
+    try:
+        number = float(value)
+    except OverflowError:
+        _error(file_name, record, field, "must be a finite number")
+    if not math.isfinite(number):
+        _error(file_name, record, field, "must be a finite number")
+    return number
 
 
 def _boolean(
@@ -922,6 +956,19 @@ def _load_history(
         reader = csv.DictReader(source)
         if reader.fieldnames is None:
             _error(file_name, "header", "columns", "CSV header is missing")
+        seen_columns: set[str] = set()
+        duplicate_columns: list[str] = []
+        for column in reader.fieldnames:
+            if column in seen_columns and column not in duplicate_columns:
+                duplicate_columns.append(column)
+            seen_columns.add(column)
+        if duplicate_columns:
+            _error(
+                file_name,
+                "header",
+                "columns",
+                "duplicate column names: " + ", ".join(duplicate_columns),
+            )
         missing = [column for column in required_columns if column not in reader.fieldnames]
         if missing:
             _error(

@@ -65,6 +65,88 @@ def test_invalid_history_status_has_explainable_error(
     assert "unsupported value" in message
 
 
+def test_duplicate_nested_json_key_is_rejected(
+    synthetic_dataset_path: Path, tmp_path: Path
+) -> None:
+    broken_path = tmp_path / "duplicate_json_key"
+    shutil.copytree(synthetic_dataset_path, broken_path)
+    employees_file = broken_path / "employees.json"
+    source = employees_file.read_text(encoding="utf-8")
+    original = '"S_CODE": 2,'
+    assert source.count(original) == 1
+    employees_file.write_text(
+        source.replace(
+            original,
+            '"S_CODE": 0,\n        "S_CODE": 2,',
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DatasetValidationError) as caught:
+        load_dataset(broken_path)
+
+    message = str(caught.value)
+    assert "employees.json" in message
+    assert "field=json" in message
+    assert "duplicate JSON object key 'S_CODE'" in message
+
+
+def test_duplicate_csv_header_is_rejected(
+    synthetic_dataset_path: Path, tmp_path: Path
+) -> None:
+    broken_path = tmp_path / "duplicate_csv_header"
+    shutil.copytree(synthetic_dataset_path, broken_path)
+    history_file = broken_path / "activity_history.csv"
+    with history_file.open(encoding="utf-8", newline="") as source:
+        rows = list(csv.reader(source))
+    duplicate_index = rows[0].index("employee_id") + 1
+    rows[0].insert(duplicate_index, "employee_id")
+    for row in rows[1:]:
+        row.insert(duplicate_index, row[duplicate_index - 1])
+    with history_file.open("w", encoding="utf-8", newline="") as target:
+        csv.writer(target).writerows(rows)
+
+    with pytest.raises(DatasetValidationError) as caught:
+        load_dataset(broken_path)
+
+    message = str(caught.value)
+    assert "activity_history.csv" in message
+    assert "record=header" in message
+    assert "duplicate column names: employee_id" in message
+
+
+@pytest.mark.parametrize(
+    "duration",
+    ["NaN", "Infinity", "-Infinity", "1e400"],
+)
+def test_non_finite_duration_is_rejected(
+    synthetic_dataset_path: Path, tmp_path: Path, duration: str
+) -> None:
+    broken_path = tmp_path / f"non_finite_{duration}"
+    shutil.copytree(synthetic_dataset_path, broken_path)
+    events_file = broken_path / "events.json"
+    source = events_file.read_text(encoding="utf-8")
+    original = '"duration_hours": 2,'
+    assert original in source
+    events_file.write_text(
+        source.replace(
+            original,
+            f'"duration_hours": {duration},',
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DatasetValidationError) as caught:
+        load_dataset(broken_path)
+
+    message = str(caught.value)
+    assert "events.json" in message
+    assert "field=duration_hours" in message
+    assert "must be a finite number" in message
+
+
 def test_dates_require_exact_yyyy_mm_dd_format(
     synthetic_dataset_path: Path, tmp_path: Path
 ) -> None:

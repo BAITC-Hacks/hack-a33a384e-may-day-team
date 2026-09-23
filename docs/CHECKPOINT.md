@@ -2,41 +2,29 @@
 
 Updated: 2026-09-23
 
-Current milestone: M1 — утверждённый MVP и первое рабочее backend-ядро
+Current milestone: backend M1.1 — проверка неоднозначных входных данных
 
 ## Goal
 
-Зафиксировать утверждённые продуктовые решения и реализовать проверяемое
-детерминированное ядро: загрузка dataset, актуальные навыки, следующий грейд,
-разрывы, допустимые candidate facts, диагностическая CLI и минимальный health.
+Минимально закрыть замечания независимой проверки M1: отклонять повторяющиеся
+JSON-ключи, повторяющиеся CSV-заголовки и неконечный `duration_hours`, не меняя
+расчётный engine, API-контракты или scope MVP.
 
 ## Done
 
-- Решения пользователя отделены от требований Halyk, фактов dataset и
-  нереализованных частей в `docs/PROJECT.md`.
-- Загрузчик читает четыре реальных файла из переданного каталога, проверяет
-  структуру, обязательные поля, уникальность ID, ссылки, enum/status, даты и
-  диапазоны уровней. Ошибка содержит файл, запись, поле и причину.
-- ID и объёмы не ограничены исходными `E0001–E0200`/200 сотрудниками.
-- Актуальные навыки пересчитываются от assessment на `last_review_date` по
-  `completed` в окне `last_review_date < date <= meta.as_of_date`.
-- Прирост стабилен, не понижает навык, не превышает event `max_level`, сохраняет
-  trace и не удваивается при повторном вызове.
-- Основная траектория — следующий грейд текущей роли. `career_goal` возвращается
-  отдельно; Lead не получает выдуманную цель.
-- Возвращаются все требования целевого role profile с current/required/missing
-  и признаком critical.
-- Кандидаты проверяются по mandatory, аудитории, prerequisites, `in_progress`,
-  прошлому `completed`, исключению `EV_036`, доступной сессии и полезному
-  приросту целевого разрыва.
-- `no_show`/`declined`/`dropped` не блокируют рекомендации; возвращаются
-  фактические счётчики по событию и связанным навыкам.
-- Нет числовых весов и итогового AI-ранжирования: выход честно обозначен как
-  candidate facts.
-- CLI выводит актуальные навыки, trace, цель, разрывы, кандидатов и причины
-  исключения; режим `--audit` пересчитывает агрегаты.
-- FastAPI публикует только `GET /api/health`.
-- 17 тестов используют только самостоятельно созданные синтетические фикстуры.
+- Работа выполнена в отдельном worktree от `cc9deae`, без изменений frontend
+  worktree и `main`.
+- До исправления 6 новых regression cases воспроизвели молчаливое принятие
+  duplicate JSON keys, duplicate CSV headers и неконечных чисел.
+- JSON loader отклоняет повторный ключ на любой глубине объекта и сообщает имя
+  файла, поле `json` и повторившийся ключ.
+- CSV loader проверяет уникальность заголовков до чтения строк; корректная
+  обработка пустых optional fields сохранена.
+- `duration_hours` принимает только конечное положительное число; `NaN`,
+  `Infinity`, `-Infinity` и overflow вида `1e400` отклоняются.
+- `engine.py`, правила карьерного развития, зависимости и API не менялись.
+- Frontend разрабатывается отдельно; его состояние M1.1 не проверяет и не
+  подтверждает.
 
 ## Current architecture
 
@@ -55,22 +43,10 @@ Python 3.10+, FastAPI 0.116.1, Uvicorn 0.35.0, pytest 8.4.1 и HTTPX 0.28.1.
 
 ## Changed files
 
-- `.gitignore`
+- `backend/career_quest/loader.py`
+- `tests/test_loader_cli.py`
 - `README.md`
 - `AGENTS.md`
-- `requirements.txt`
-- `requirements-dev.txt`
-- `backend/__init__.py`
-- `backend/career_quest/__init__.py`
-- `backend/career_quest/models.py`
-- `backend/career_quest/loader.py`
-- `backend/career_quest/engine.py`
-- `backend/career_quest/cli.py`
-- `backend/career_quest/api.py`
-- `tests/conftest.py`
-- `tests/test_engine.py`
-- `tests/test_loader_cli.py`
-- `tests/test_api.py`
 - `docs/PROJECT.md`
 - `docs/CHECKPOINT.md`
 
@@ -89,7 +65,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Результат M1: `17 passed`; есть одно предупреждение о deprecated alias внутри
+Результат M1.1: `23 passed`; есть одно предупреждение о deprecated alias внутри
 Starlette TestClient/AnyIO, не в коде проекта.
 
 Официальный dataset:
@@ -120,16 +96,18 @@ Invoke-RestMethod http://127.0.0.1:8000/api/health
 
 ## Git
 
-Branch: `main`
+Branch: `fix/backend-m1-validation`
 
-Parent commit: `a70a3a90a18ca035491de5172f00a547e48fbcbc`
+Base commit: `cc9deae81f52544bac1541f0c81f7a0ff129a1fd`
 
-Milestone commit message: `feat: implement verified Career Quest core`
+Milestone commit message: `fix: reject ambiguous dataset inputs`
 
-Pushed: YES, `origin/main` (точный SHA намеренно не записан внутрь создаваемого
-commit; смотреть `git log`)
+Pushed: YES, `origin/fix/backend-m1-validation` (точный SHA смотреть в
+`git log`)
 
 REPO VERIFY: PENDING — требуется независимая проверка ChatGPT после push.
+
+Интеграция backend-ветки в `main`: PENDING.
 
 ## Deploy
 
@@ -139,9 +117,10 @@ Status: не выполнялся. VPS, серверная PostgreSQL и DNS н�
 
 ## Known issues
 
-- Локальная проверка выполнена на Python 3.12.7; код и закреплённые прямые
-  зависимости совместимы с Python 3.10+, но Python 3.10 отсутствует на этой
-  машине.
+- Локальная проверка выполнена на Python 3.12.7.
+- Python 3.10: NOT TESTED — этот runtime отсутствует на машине.
+- Полный однокомандный запуск, требуемый Halyk, ещё не реализован.
+- Frontend выполняется в отдельной ветке/worktree; его готовность не проверена.
 - JSON/CSV сущности англоязычные; RU/KZ находятся только в README dataset.
 - Исходные повторы `EV_001`–`EV_003` после completed сохранены без исправления.
 - Числовые веса, подробная схема БД и точный OpenAI model ID не утверждены.
@@ -165,6 +144,6 @@ Status: не выполнялся. VPS, серверная PostgreSQL и DNS н�
 
 ## Next
 
-После независимой проверки M1: persistence/API/auth/AI, затем интерфейс.
-HTTP completion, транзакции и защита от двойного нажатия относятся к следующему
-этапу.
+Независимо проверить backend M1.1. После проверки отдельно решить интеграцию
+`fix/backend-m1-validation` в `main`; автоматический merge/cherry-pick не
+выполнялся. Frontend продолжает свой отдельный согласованный этап.

@@ -17,6 +17,7 @@ from backend.career_quest.security import (
     new_token,
     verify_password,
 )
+from backend.career_quest.settings import DemoAccounts, Settings
 from backend.career_quest.store import Actor, completion_payload
 from backend.career_quest.workflow import (
     EmployeeState,
@@ -161,9 +162,42 @@ class PolicyStore:
         return self.states[employee_id]
 
 
-def _client(store: PolicyStore) -> TestClient:
+def _client(
+    store: PolicyStore, settings: Settings | None = None
+) -> TestClient:
     app.dependency_overrides[get_store] = lambda: store
+    if settings is not None:
+        from backend.career_quest.http_api import get_settings
+
+        app.dependency_overrides[get_settings] = lambda: settings
     return TestClient(app)
+
+
+def _demo_accounts() -> DemoAccounts:
+    return DemoAccounts(
+        employee_one_username="employee.a",
+        employee_one_password="correct-password",
+        employee_one_id="EMP-new-alpha",
+        employee_two_username="employee.b",
+        employee_two_password="correct-password",
+        employee_two_id="LEAD-custom",
+        hr_username="hr.user",
+        hr_password="correct-password",
+    )
+
+
+def _settings(demo_accounts: DemoAccounts | None) -> Settings:
+    return Settings(
+        database_url=None,
+        dataset_path=None,
+        allowed_origins=("http://testserver",),
+        cookie_secure=False,
+        session_ttl_hours=12,
+        demo_accounts=demo_accounts,
+        openai_api_key=None,
+        openai_model="test-model",
+        openai_timeout_seconds=1,
+    )
 
 
 def _login(client: TestClient, username: str, password: str = "correct-password"):
@@ -198,6 +232,86 @@ def test_login_logout_and_hidden_session_token(synthetic_dataset_path: Path) -> 
     )
     assert logged_out.status_code == 200
     assert client.get("/api/auth/me").status_code == 401
+    app.dependency_overrides.clear()
+
+
+def test_demo_login_uses_configured_accounts_and_session_contract(
+    synthetic_dataset_path: Path,
+) -> None:
+    store = PolicyStore(synthetic_dataset_path)
+    client = _client(store, _settings(_demo_accounts()))
+
+    for role, username, employee_id in (
+        ("employee", "employee.a", "EMP-new-alpha"),
+        ("hr", "hr.user", None),
+    ):
+        response = client.post("/api/auth/demo-login", json={"role": role})
+        assert response.status_code == 200
+        assert response.json()["username"] == username
+        assert response.json()["role"] == role
+        assert response.json()["employee_id"] == employee_id
+        cookies = response.headers.get_list("set-cookie")
+        session_cookie = next(
+            item for item in cookies if item.startswith("cq_session=")
+        )
+        csrf_cookie = next(
+            item for item in cookies if item.startswith("cq_csrf=")
+        )
+        assert "HttpOnly" in session_cookie
+        assert "HttpOnly" not in csrf_cookie
+        assert response.json()["csrf_token"] == client.cookies["cq_csrf"]
+        assert client.cookies["cq_session"] not in response.text
+        assert "correct-password" not in response.text
+
+    app.dependency_overrides.clear()
+
+
+def test_demo_login_accepts_only_exact_role_payload(
+    synthetic_dataset_path: Path,
+) -> None:
+    store = PolicyStore(synthetic_dataset_path)
+    client = _client(store, _settings(_demo_accounts()))
+
+    for payload in (
+        {"role": "admin"},
+        {"role": "employee", "username": "employee.a"},
+        {},
+    ):
+        response = client.post("/api/auth/demo-login", json=payload)
+        assert response.status_code == 400
+        assert response.json()["code"] == "validation_error"
+    assert store.sessions == {}
+
+    app.dependency_overrides.clear()
+
+
+def test_demo_login_fails_safely_when_not_configured_or_role_mismatches(
+    synthetic_dataset_path: Path,
+) -> None:
+    store = PolicyStore(synthetic_dataset_path)
+    client = _client(store, _settings(None))
+
+    missing = client.post("/api/auth/demo-login", json={"role": "employee"})
+    assert missing.status_code == 500
+    assert missing.json() == {
+        "code": "configuration_error",
+        "message": "Demo login is not configured.",
+        "details": {},
+    }
+
+    mismatched = replace(
+        _demo_accounts(),
+        employee_one_username="hr.user",
+        employee_one_id="not-used",
+    )
+    client = _client(store, _settings(mismatched))
+    response = client.post("/api/auth/demo-login", json={"role": "employee"})
+    assert response.status_code == 500
+    assert response.json()["code"] == "configuration_error"
+    assert "correct-password" not in response.text
+    assert "hr.user" not in response.text
+    assert store.sessions == {}
+
     app.dependency_overrides.clear()
 
 

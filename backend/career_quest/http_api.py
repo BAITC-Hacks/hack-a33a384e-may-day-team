@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import secrets
 from datetime import date
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Request, Response, UploadFile
 from pydantic import BaseModel, ConfigDict
@@ -20,6 +21,11 @@ class LoginRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     username: str
     password: str
+
+
+class DemoLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    role: Literal["employee", "hr"]
 
 
 class CompleteRequest(BaseModel):
@@ -141,6 +147,43 @@ def login(
     store: PostgresStore = Depends(get_store),
 ) -> dict[str, object]:
     actor, token = store.login(body.username, body.password)
+    _set_auth_cookies(response, settings, token, actor.csrf_token)
+    return {
+        "username": actor.username,
+        "role": actor.role,
+        "employee_id": actor.employee_id,
+        "csrf_token": actor.csrf_token,
+    }
+
+
+@router.post("/api/auth/demo-login")
+def demo_login(
+    body: DemoLoginRequest,
+    response: Response,
+    settings: Settings = Depends(get_settings),
+    store: PostgresStore = Depends(get_store),
+) -> dict[str, object]:
+    demo = settings.demo_accounts
+    if demo is None:
+        raise WorkflowError(
+            500,
+            "configuration_error",
+            "Demo login is not configured.",
+        )
+    if body.role == "employee":
+        username = demo.employee_one_username
+        password = demo.employee_one_password
+    else:
+        username = demo.hr_username
+        password = demo.hr_password
+    actor, token = store.login(username, password)
+    if actor.role != body.role:
+        store.logout(token)
+        raise WorkflowError(
+            500,
+            "configuration_error",
+            "Demo account role does not match its configuration.",
+        )
     _set_auth_cookies(response, settings, token, actor.csrf_token)
     return {
         "username": actor.username,

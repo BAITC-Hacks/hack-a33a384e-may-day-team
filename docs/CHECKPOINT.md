@@ -2,139 +2,73 @@
 
 Updated: 2026-09-23
 
-Current milestone: M2.2 — grounded AI recommendations
+Current milestone: E2E integration complete / finalization.
 
-## Goal
+Документ фиксирует integration commit
+`29ab9f659da1bcd02774994746078aedb748bfd6`.
+Параллельный frontend fallback hotfix в этот commit не входит.
 
-Сохранить расчёты M1 и добавить PostgreSQL, сессии Employee/HR, выполнение
-активности и HR import/overview. AI и frontend в этот этап не входят.
+## Commits
 
-## Done
+- backend base: `601d96d9d18fc92ddeb8068b3fa4a4ef25d87137`
+- frontend: `30608c2e355917e68847f630dae63368aabd7752`
+- integration: `29ab9f659da1bcd02774994746078aedb748bfd6`
 
-- База ветки: `3ed7fd7357442199d31eabbe20bfc6738df9e44a`.
-- Loader и engine не переписывались. Новый слой вызывает их расчёты.
-- Добавлены SQLAlchemy/Alembic-схема, seed, сессии, CSRF и маршруты из
-  `docs/API.md`.
-- Новые завершения отделены от исторического replay и применяются даже если
-  `last_review_date` совпадает с бизнес-датой.
-- Повторный `Idempotency-Key` и повтор scheduled-сессии `EV_036` покрыты
-  policy-тестами.
-- Исходный dataset не изменяется и не коммитится.
-- Кандидаты отдают каталожные `type`, `format`, `duration_hours` и
-  `upcoming_sessions`.
-- Флаг профиля называется `career_goal_differs_from_primary_target` и не меняет
-  primary target.
+## Работает
+
+- demo Employee/HR login через `POST /api/auth/demo-login`
+- обычный username/password login
+- профиль сотрудника
+- AI recommendation endpoint
+- completion и повторное чтение профиля/рекомендации
+- HR overview
+- import JSON + CSV
+- frontend production build
+- browser smoke по отчёту integration milestone: Employee, completion, HR,
+  import, mobile
 
 ## Verification
 
-M2.1 PostgreSQL: VERIFIED.
+M2.2 backend при подключённой PostgreSQL test DB: `42 passed`, `0 skipped`.
 
-Локальной службы PostgreSQL нет. VPS `194.32.141.87` использовался только как
-изолированный PostgreSQL host. Созданы `career_quest_dev` и `career_quest_test`,
-owner `career_quest_app`. База `hackathon` не изменялась. Порт 5432 слушает
-только localhost на VPS; наружу он не открывался. С локальной машины доступ
-шёл через SSH-туннель `127.0.0.1:55432`.
+Integration-проход этого commit без подключённой test DB:
+`40 passed`, `5 skipped`.
 
-PostgreSQL: 14.24. Python: 3.12.7. Python 3.10: NOT TESTED.
+Пять PostgreSQL integration tests ранее отдельно прошли на PostgreSQL 14.24.
+Суммы «45 tests passed» в документах нет.
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest -q
-```
+Проверенный runtime того PostgreSQL-прогона: Python 3.12.7. Отдельный прогон
+на Python 3.10 в checkpoint не зафиксирован.
 
-Результат M2.1B при `DATABASE_URL` на `career_quest_test`: `35 passed`, skipped
-PostgreSQL-тестов нет. Полный pytest M2.2 на том же подключении: `42 passed`,
-0 skipped. Пять интеграционных тестов заменяют прежние заглушки:
-вход и права, сохранение и idempotency, два параллельных completion, одна
-scheduled-сессия `EV_036`, атомарный импорт.
+Frontend: `npm run build` — PASS.
 
-Ручной smoke на `career_quest_dev`: `GET /api/ready` вернул 200, completion
-сохранился после перезапуска backend, повторный seed того же dataset не сбросил
-прогресс, другой dataset вернул `dataset_conflict`.
+Live AI smoke, зафиксированный на backend milestone: модель `gpt-5.6-terra`,
+`used_ai=true`, latency 7883 ms, три ID из candidate set. Это не утверждение,
+что выбор модели всегда лучший.
 
-Официальный dataset до новых app-actions: 318 / 111 / 308 / 308.
+## Known
 
-Независимый code review ChatGPT для M1/M1.1 остаётся прежним. M2.1B его ещё не
-проходил. Независимый повтор тестового запуска ChatGPT не заявлялся.
+- UI показывает `skill_id`: display name навыка в API профиля нет.
+- Недавняя активность на главной показывает `event_id`.
+- Demo-login — hackathon-specific. Production authentication им не является.
+- На этом commit карточка рекомендации и Complete доступны только при
+  `used_ai=true`. Server-ranked fallback UI не показывает. Final UX hotfix
+  выполняется параллельно и в этот docs-commit не входит.
+- Deploy не выполнен.
+- One-command launcher для всего приложения отсутствует. Backend и frontend
+  запускаются отдельно.
+- Экраны «Карьерный путь» и «История» не реализованы и не входят в обязательный
+  сценарий.
 
-## Current architecture
+## Repo verify
 
-```text
-dataset files → loader/engine
-PostgreSQL → accounts, sessions, employees, history, idempotency
-HTTP API → auth, employee workflow, HR overview/import
-```
+Integration commit `29ab9f6` был независимо проверен ChatGPT.
 
-M2.2 считает навыки и eligibility на сервере. OpenAI получает только роль, грейд,
-цель и допустимые candidate facts, без имени, отдела, руководителя и сырой
-истории. Live smoke на синтетическом профиле: модель `gpt-5.6-terra`,
-`used_ai=true`, latency 7883 мс, 3 ID из candidate set, по 4 фактора, latency
-ниже 10 секунд. Mock-тесты покрывают чужой ID, дубли, больше трёх ответов,
-нехватку факторов, timeout, ошибку провайдера, отсутствие ключа и стабильный
-fallback. Это не утверждение, что выбор модели всегда лучший. Frontend не
-проверялся. PostgreSQL-проверки M2.1B сохранены: 5 интеграционных тестов снова
-прошли, схема не менялась.
+Финальный frontend fallback hotfix ожидается отдельно.
 
-## Changed files
-
-- `backend/career_quest/api.py`
-- `backend/career_quest/errors.py`
-- `backend/career_quest/http_api.py`
-- `backend/career_quest/orm.py`
-- `backend/career_quest/security.py`
-- `backend/career_quest/serve.py`
-- `backend/career_quest/settings.py`
-- `backend/career_quest/store.py`
-- `backend/career_quest/workflow.py`
-- `alembic.ini`
-- `alembic/env.py`
-- `alembic/versions/20260923_0001_initial.py`
-- `requirements.txt`
-- `.env.example`
-- `tests/test_api.py`
-- `tests/test_m2_policy.py`
-- `tests/test_postgres_workflow.py`
-- `README.md`
-- `AGENTS.md`
-- `docs/API.md`
-- `docs/PROJECT.md`
-- `docs/CHECKPOINT.md`
-
-## Git
-
-Branch: `feat/backend-m2-api`
-
-Base commit: `3ed7fd7357442199d31eabbe20bfc6738df9e44a`
-
-Previous commit: `f070d34078189fcbe566879bd7102a238bb0cbfd`
-
-Commit message: `fix: verify persistent workflow on PostgreSQL`
-
-Pushed: YES, только `origin/feat/backend-m2-api`.
-
-Интеграция в `main`: не выполнена.
-
-REPO VERIFY: PENDING — commit после push ожидает независимой проверки ChatGPT.
+Этот docs-commit после push ожидает независимой проверки. REPO VERIFY: PENDING.
 
 ## Deploy
 
-Приложение не разворачивалось. Nginx, DNS и systemd не изменялись. На VPS
-созданы только две базы Career Quest и отдельная role.
-
-## Known issues
-
-- Python 3.10: NOT TESTED.
-- Полный однокомандный запуск сайта не реализован.
-- Frontend не проверялся.
-- Числовые веса ранжирования и точный AI model ID не утверждены.
-
-## Decisions
-
-Утверждённые решения M1 сохранены: следующий грейд текущей роли, без
-автоматического повышения, без рекомендации mandatory и без подмены цели
-межролевым `career_goal`.
-
-## Next
-
-Следующий этап: соединить frontend и backend, затем deploy и финальный README.
-Ключ OpenAI лежит только в локальном `.env`. База этой ветки для M2.2 —
-`3840c66`, поверх неё уже был commit AI-черновика `ba7e5ef`.
+Приложение не разворачивалось. Nginx, DNS и systemd для Career Quest не
+настраивались и не проверялись.

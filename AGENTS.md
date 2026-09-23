@@ -25,7 +25,19 @@ python -m venv .venv
 процесса важнее файла. Нужны `DATABASE_URL`, `DATASET_PATH` и демо-учётные
 записи. PostgreSQL-тесты выполняются только когда `DATABASE_URL` указывает на
 `career_quest_test`; без URL они пропускаются и не считаются пройденными.
-Контракт API: `docs/API.md`.
+Пропуск не записывать как passed.
+
+Frontend, когда backend уже слушает порт 8000:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+npm run build
+```
+
+Одной команды на backend и frontend нет. Контракт API: `docs/API.md`.
+`POST /api/auth/demo-login` — hackathon demo, не production authentication.
 
 ## Ограничения
 
@@ -47,10 +59,10 @@ python -m venv .venv
 - Не менять VPS, серверную БД, DNS и deploy без отдельного задания.
 - Документация обязана соответствовать фактически работающему коду.
 
-`README.md` — канонический русский README. До финального этапа не создавать и не
-обновлять `README.kz.md`/`README.en.md`. Это языковое правило не отменяет
-обновление всех затронутых технических документов: `AGENTS.md`,
-`docs/PROJECT.md` и `docs/CHECKPOINT.md`.
+`README.md` — канонический русский README. `README.kz.md` и `README.en.md` не
+создавать. Это языковое правило не отменяет обновление затронутых технических
+документов: `AGENTS.md`, `docs/PROJECT.md`, `docs/CHECKPOINT.md`,
+`docs/FRONTEND.md` и `frontend/README.md`.
 
 После milestone:
 

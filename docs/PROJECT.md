@@ -101,12 +101,13 @@ Employee видит собственное развитие. HR видит ча�
 ### Стек и эксплуатация
 
 - backend: FastAPI и Python 3.10+;
-- frontend: React/Vite;
-- постоянное хранилище: PostgreSQL;
-- production: Nginx + systemd, без Docker.
+- frontend: React 19 / Vite 8;
+- постоянное хранилище: PostgreSQL, SQLAlchemy, Alembic;
+- AI: OpenAI Responses API, модель из `OPENAI_MODEL`;
+- production-план: Nginx + systemd, без Docker. Deploy ещё не выполнен.
 
-В M1 реализовано только backend-ядро без БД. Dataset передаётся загрузчику
-параметром; абсолютного пути в коде нет.
+Dataset передаётся загрузчику путём из `DATASET_PATH`. Абсолютного пути в коде
+нет. Raw dataset в git не хранится.
 
 ### Интерфейс
 
@@ -116,9 +117,16 @@ Android/iOS-приложения сейчас не разрабатываютс�
 
 ### Вход и права
 
-Будут предсозданные демонстрационные учётные записи Employee/HR. Роль проверяет
-сервер; открытого переключателя «стать HR» не будет. Регистрация, SMS/OTP и
-отдельная админка не нужны. Auth реализуется после расчётного ядра.
+Сервер хранит сессию в HttpOnly cookie и проверяет CSRF. Роль берётся из
+учётной записи, не из тела запроса. Employee не читает чужой профиль. HR-маршруты
+закрыты сервером.
+
+Обычный вход — `POST /api/auth/login` с username и password.
+
+Для hackathon demo утверждён `POST /api/auth/demo-login` с телом
+`{"role":"employee"}` или `{"role":"hr"}`. Сервер сам выбирает настроенный
+аккаунт. Это demo entry хакатона, не production authentication. Регистрации,
+SMS/OTP и отдельной админки нет.
 
 ### Карьерная траектория
 
@@ -163,9 +171,10 @@ Android/iOS-приложения сейчас не разрабатываютс�
 возвращает отдельные фактические счётчики по событию и связанным навыкам, не
 приписывая сотруднику мотивацию.
 
-Выход M1 — candidate facts, а не итоговая AI-рекомендация. Числового рейтинга
-нет. Для каждого кандидата доступны цель, затрагиваемые и critical gaps,
-prerequisites, потенциальные изменения и факты участия. Отдельно различаются:
+Движок по-прежнему отдаёт candidate facts, а не выбор модели. Числового
+AI-score нет. Для каждого кандидата доступны цель, затрагиваемые и critical
+gaps, prerequisites, потенциальные изменения и факты участия. Отдельно
+различаются:
 
 - следующий грейд отсутствует;
 - требования цели уже выполнены;
@@ -186,12 +195,11 @@ Embeddings, vector DB, NVIDIA и собственное обучение не н
 
 ### Документация
 
-`README.md` — канонический русский README. `README.kz.md` и `README.en.md`
-создаются на финальном этапе. Правило о единственном обновляемом README
-относится только к языковым версиям: все затронутые технические документы
-`AGENTS.md`, `docs/PROJECT.md`, `docs/CHECKPOINT.md` обновляются обязательно.
+`README.md` — канонический русский README. `README.kz.md` и `README.en.md` в
+текущую сдачу не входят.
 
-Числовые веса ранжирования и точный OpenAI model ID не утверждены.
+Model ID задаётся `OPENAI_MODEL`. Live smoke использовал `gpt-5.6-terra`.
+Порядок deterministic fallback описан в `docs/API.md` и не является AI-score.
 
 ## E. M2.1: хранение и API
 
@@ -219,32 +227,45 @@ PostgreSQL 14 проверен через SSH-туннель: миграция, 
 запроса и два параллельных completion. Базы только `career_quest_dev` и
 `career_quest_test`. База `hackathon` не изменялась.
 
-## D. Ещё не реализовано
+## D. Текущие ограничения
 
-- frontend и адаптивный интерфейс;
-- отдельный экран сравнения;
-- React/Vite, PWA и нативные приложения;
-- полный запуск сайта одной командой;
-- deploy, Nginx, systemd, DNS и live demo.
+Реализованы backend API, PostgreSQL, auth, AI recommendation, completion,
+HR overview/import и React/Vite клиент. Подробный статус — `docs/CHECKPOINT.md`.
 
-Это порядок разработки, а не удаление обязательных возможностей из MVP.
+Остаётся:
 
-## Реализованная архитектура M1
+- hackathon demo-login рядом с обычным login;
+- `skill_id` в UI, потому что API профиля не отдаёт display name навыка;
+- отдельные экраны «Карьерный путь» и «История» не сделаны и не являются
+  обязательным сценарием;
+- на integration commit UI не показывает server-ranked fallback;
+- полный запуск сайта одной командой отсутствует;
+- deploy, Nginx, systemd, DNS и live demo не выполнены.
+
+PWA, нативные приложения и награды не входят в обязательный объём.
+
+## Реализованная архитектура
 
 ```text
 dataset path
     ↓
-validated loader (JSON/CSV → immutable domain objects)
+validated loader
     ↓
-pure deterministic engine
-    ├─ current skills + trace
-    ├─ next-grade target + gaps
-    └─ eligible candidate facts + exclusions
+deterministic Career Engine
     ↓
-diagnostic CLI
+PostgreSQL
 
-FastAPI → GET /api/health only
+React/Vite
+    ↓
+FastAPI
+    ├ auth / sessions / CSRF
+    ├ employee profile, recommendations, completion
+    ├ HR overview / import
+    └ AI recommendation layer
+         получает только допустимых candidates
+         validates IDs, factors, ranks
+         fallback без вызова модели как будто она ответила
 ```
 
-Расчётный модуль не зависит от FastAPI, PostgreSQL и OpenAI. Профили и история
-на M1 через HTTP не публикуются.
+Расчётный модуль не зависит от FastAPI, PostgreSQL и OpenAI.
+`GET /api/health` проверяет только процесс. Готовность БД — `GET /api/ready`.

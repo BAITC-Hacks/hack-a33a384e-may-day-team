@@ -84,19 +84,6 @@ function Navigation({ activeId, items, mobile = false, onSelect }) {
         const className = mobile
           ? 'bottom-navigation__item'
           : 'sidebar-navigation__item'
-        if (!active && id !== 'home' && id !== 'hr') {
-          return (
-            <span
-              aria-disabled="true"
-              className={className}
-              key={id}
-              title="Для этого раздела нет утверждённого экрана"
-            >
-              <Icon className="navigation-icon" />
-              <span>{mobile ? shortLabel : label}</span>
-            </span>
-          )
-        }
 
         return (
           <button
@@ -358,6 +345,147 @@ function RecentActivity({ history }) {
         </ul>
       )}
     </section>
+  )
+}
+
+function goalsDiffer(goal, target) {
+  if (!goal) return false
+  if (!target) return true
+  return (
+    goal.target_role !== target.role || goal.target_grade !== target.grade
+  )
+}
+
+function CareerPathScreen({ profile }) {
+  const target = profile.primary_target
+  const goal = profile.career_goal
+  const requirements = profile.requirements ?? []
+
+  return (
+    <>
+      <header className="dashboard-intro">
+        <div className="dashboard-intro__desktop">
+          <p className="dashboard-intro__eyebrow">СОТРУДНИК</p>
+          <h1>Карьерный путь</h1>
+          <p className="dashboard-intro__subtitle">
+            {profile.role} · {profile.grade}
+          </p>
+        </div>
+        <div className="dashboard-intro__mobile">
+          <p>{profile.full_name}</p>
+          <h1>Карьерный путь</h1>
+          <p>
+            {profile.role} · {profile.grade}
+          </p>
+        </div>
+      </header>
+      <div className="path-stack">
+        <section className="card path-summary" aria-labelledby="current-role-heading">
+          <h2 id="current-role-heading">Текущая позиция</h2>
+          <p>
+            <strong>{profile.role}</strong>
+            <span>{profile.grade}</span>
+          </p>
+        </section>
+        <section className="card path-summary" aria-labelledby="next-goal-heading">
+          <h2 id="next-goal-heading">Следующая цель</h2>
+          {target ? (
+            <p>
+              <strong>{target.role}</strong>
+              <span>{target.grade}</span>
+            </p>
+          ) : (
+            <p>Следующий грейд в каталоге отсутствует</p>
+          )}
+        </section>
+        <ProgressCard profile={profile} />
+        {goalsDiffer(goal, target) && (
+          <section className="card path-summary" aria-labelledby="personal-goal-heading">
+            <h2 id="personal-goal-heading">Личная карьерная цель</h2>
+            <p>
+              <strong>{goal.target_role}</strong>
+              <span>{goal.target_grade}</span>
+            </p>
+          </section>
+        )}
+        <section className="card requirement-list" aria-labelledby="requirements-heading">
+          <h2 id="requirements-heading">Требования следующего уровня</h2>
+          {requirements.length === 0 ? (
+            <p>Требования следующего уровня отсутствуют</p>
+          ) : (
+            <ul>
+              {requirements.map((item) => (
+                <li key={item.skill_id}>
+                  <span className="gap-name">{item.skill_id}</span>
+                  <span className="requirement-meta">
+                    текущий {item.current_level} · требуется {item.required_level} · не
+                    хватает {item.missing_level} · {item.critical ? 'critical' : 'не critical'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </>
+  )
+}
+
+function HistoryScreen({ profile }) {
+  const history = [...(profile.history ?? [])].reverse()
+
+  return (
+    <>
+      <header className="dashboard-intro">
+        <div className="dashboard-intro__desktop">
+          <p className="dashboard-intro__eyebrow">СОТРУДНИК</p>
+          <h1>История</h1>
+          <p className="dashboard-intro__subtitle">
+            {history.length === 0
+              ? 'Записей участия нет'
+              : `${history.length} в загруженном профиле`}
+          </p>
+        </div>
+        <div className="dashboard-intro__mobile">
+          <p>{profile.full_name}</p>
+          <h1>История</h1>
+          <p>
+            {history.length === 0 ? 'Записей нет' : `${history.length} записей`}
+          </p>
+        </div>
+      </header>
+      <section className="card record-list" aria-labelledby="history-heading">
+        <h2 id="history-heading">Участие</h2>
+        {history.length === 0 ? (
+          <p>История участия пока пуста</p>
+        ) : (
+          <ul>
+            {history.map((item) => (
+              <li key={item.record_id}>
+                <span
+                  className={`activity-card__icon ${
+                    item.status === 'completed'
+                      ? 'activity-card__icon--success'
+                      : 'activity-card__icon--neutral'
+                  }`}
+                  aria-hidden="true"
+                >
+                  <DocumentIcon />
+                </span>
+                <div>
+                  <h3>{item.event_id}</h3>
+                  <p>
+                    {item.date} · {item.status}
+                    {item.completion_pct != null ? ` · ${item.completion_pct}%` : ''}
+                    {item.origin ? ` · ${item.origin}` : ''}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
   )
 }
 
@@ -653,6 +781,8 @@ function App() {
               recommendations={recommendations}
             />
           )}
+          {screen === 'path' && profile && <CareerPathScreen profile={profile} />}
+          {screen === 'history' && profile && <HistoryScreen profile={profile} />}
           {screen === 'detail' && profile && (
             <DetailScreen
               loading={loading}

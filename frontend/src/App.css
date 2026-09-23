@@ -572,6 +572,108 @@
   font-size: 11px;
 }
 
+.path-stack {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.path-summary,
+.requirement-list,
+.record-list {
+  min-width: 0;
+  height: auto;
+  padding: 17px 23px;
+}
+
+.path-summary h2,
+.requirement-list h2,
+.record-list h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 22px;
+  font-weight: 720;
+  line-height: 1.22;
+  letter-spacing: -0.35px;
+}
+
+.path-summary p,
+.requirement-list > p,
+.record-list > p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 8px 0 0;
+  color: #596963;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.path-summary strong {
+  color: #07110f;
+  font-weight: 720;
+}
+
+.requirement-list ul,
+.record-list ul {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.requirement-list li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(7rem, 12rem) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.requirement-list li:first-child,
+.record-list li:first-child {
+  border-top: 0;
+}
+
+.requirement-meta {
+  min-width: 0;
+  color: #596963;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.record-list li {
+  min-width: 0;
+  min-height: 79px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.record-list li > div {
+  min-width: 0;
+}
+
+.record-list h3 {
+  margin: 0;
+  color: #24312e;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.record-list li p {
+  margin: 2px 0 0;
+  color: #596963;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 @media (min-width: 768px) {
   .mobile-only {
     display: none !important;
@@ -902,6 +1004,28 @@
     width: 22px;
     height: 22px;
   }
+
+  .path-stack {
+    gap: 14px;
+  }
+
+  .path-summary h2,
+  .requirement-list h2,
+  .record-list h2 {
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .requirement-list li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 10px 0;
+  }
+
+  .record-list li {
+    min-height: 64px;
+    gap: 12px;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1199px) {
@@ -930,6 +1054,10 @@
   .gaps-card,
   .activity-card {
     min-height: 0;
+  }
+
+  .requirement-list li {
+    grid-template-columns: minmax(0, 9rem) minmax(0, 1fr);
   }
 }
 

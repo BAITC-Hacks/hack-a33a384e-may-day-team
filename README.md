@@ -2,8 +2,10 @@
 
 AI career navigator для Halyk HackAlem AI.
 
-Документ описывает состояние integration commit
-`29ab9f659da1bcd02774994746078aedb748bfd6`.
+Документ описывает final assembly: launcher и проверка поверх UX
+`7c22ccd557d894ddeccd4148f4e23a2f4fa55d37`. Fallback UI вошёл в
+`014d6c5d20dd005af2f5a4987130922ebd343c82`. Docs source:
+`b90defe25dc6b78a22c3c34681ceabf12a3f7087`.
 
 ## Что решает
 
@@ -152,31 +154,39 @@ Raw official dataset в git не хранится. Загрузчик прини
 - В payload модели не входят полное имя, отдел, руководитель и сырая история.
   Передаются роль, грейд, цель и факты допустимых активностей.
 
-На этом commit экран сотрудника показывает карточку рекомендации и Complete
-только при `used_ai=true`. Ответ `fallback_ranked` сервер отдаёт, но UI пишет
-«Рекомендация временно недоступна». Исправление этого показа выполняется
-параллельным frontend hotfix и в этот docs-commit не входит.
+На этом commit непустой `recommendations` показывается всегда.
+`used_ai=true` подписан «AI · Рекомендуемый шаг». `fallback_ranked` подписан
+«Рекомендуемый шаг» и не называется AI. Пустой список показывает
+«Рекомендация временно недоступна». Detail, сравнение и Complete работают
+для fallback-активности.
 
 ## Проверки
 
 M2.2 backend, когда PostgreSQL test DB была подключена:
 `42 passed`, `0 skipped`.
 
-Integration-проход на этом commit, в котором `DATABASE_URL` test DB не был
-подключён: `40 passed`, `5 skipped`.
+Final assembly без подключённой test DB: `40 passed`, `5 skipped`.
+Пять PostgreSQL tests не запускались: `DATABASE_URL` не указывал на
+`career_quest_test`. Skipped не считаются passed.
 
-Пять PostgreSQL integration tests ранее отдельно прошли на PostgreSQL 14.24.
-Эти прогоны не складываются в формулировку «45 tests passed».
+Frontend этого прогона: `npm run lint` — PASS, `npm run build` — PASS.
 
-Frontend: `npm run build` — PASS.
-
-Browser smoke по отчёту integration milestone:
-Employee, completion, HR, import, mobile — PASS.
+`python scripts/start.py` поднял backend и Vite. `GET /api/health` вернул 200.
+При настроенной локальной DB `GET /api/ready` вернул 200. Frontend открылся
+на `http://127.0.0.1:5173`. Ctrl+Break завершил оба процесса, порты 8000 и
+5173 закрылись.
 
 ## Запуск
 
-Полный сайт одной командой не запускается. Отдельного launcher для backend и
-frontend в репозитории нет. Backend и frontend стартуют двумя командами.
+Из корня репозитория, после setup:
+
+```powershell
+python scripts/start.py
+```
+
+Команда запускает текущий backend entrypoint и `npm run dev`. Зависимости
+сама не устанавливает. Ctrl+C или Ctrl+Break останавливает оба процесса.
+Backend: `http://127.0.0.1:8000`. Frontend: `http://127.0.0.1:5173`.
 
 ### Prerequisites
 
@@ -184,6 +194,7 @@ frontend в репозитории нет. Backend и frontend стартуют 
 - PostgreSQL
 - Node, совместимый с Vite 8: Node 20.19+ либо 22.12+
 - dataset той же схемы
+- установленные Python- и frontend-зависимости
 
 ### Setup
 
@@ -231,22 +242,21 @@ Linux/macOS: `python3 -m venv .venv`, затем `pip` из `.venv/bin`.
 
 `serve` и Alembic читают корневой `.env`, если он есть. Переменные процесса
 важнее файла. Миграции разрешены только для баз `career_quest_dev` и
-`career_quest_test`.
+`career_quest_test`. `scripts/start.py` вызывает тот же `serve` и отдельный
+`.env` не читает.
 
-### Backend
-
-Из корня репозитория:
+Отдельный backend по-прежнему запускается так:
 
 ```powershell
 .\.venv\Scripts\python.exe -m backend.career_quest.serve
 ```
 
 Команда применяет миграции к настроенной локальной БД Career Quest, загружает
-dataset и стартует API. Это не запуск сайта.
+dataset и стартует API.
 
 ### Frontend
 
-Во втором терминале:
+Во втором терминале, если backend уже запущен отдельно:
 
 ```powershell
 cd frontend
@@ -281,16 +291,14 @@ Dev-server Vite проксирует `/api` на `http://127.0.0.1:8000`.
 - Недавняя активность на главной показывает `event_id`.
 - Отдельные экраны «Карьерный путь» и «История» не сделаны и не являются
   обязательным сценарием; пункты навигации отключены.
-- На этом commit UI не рисует server-ranked fallback (`used_ai=false`).
-  Параллельный frontend hotfix в эту ветку не входит.
 - Deploy не выполнен: Nginx, DNS, systemd и live demo не проверялись.
-- Одной команды на весь сайт нет.
 
 ## Структура
 
 ```text
 backend/career_quest/   — loader, engine, API, auth, AI, completion, HR
 frontend/               — React/Vite клиент
+scripts/start.py        — локальный запуск backend и frontend
 alembic/                — миграции PostgreSQL
 tests/                  — синтетические фикстуры и тесты
 docs/PROJECT.md         — требования и утверждённые решения

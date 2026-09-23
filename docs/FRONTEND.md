@@ -1,7 +1,7 @@
 # Career Quest frontend
 
-Состояние клиента на integration commit
-`29ab9f659da1bcd02774994746078aedb748bfd6`.
+Состояние клиента после fallback `014d6c5d20dd005af2f5a4987130922ebd343c82`
+и UX `7c22ccd557d894ddeccd4148f4e23a2f4fa55d37`.
 
 ## Что подключено к API
 
@@ -25,10 +25,10 @@
   события.
 - «Карьерный путь» и «История» стоят в навигации с `aria-disabled`. Отдельных
   экранов нет. Это не обязательный сценарий кейса.
-- Главная и Complete берут первую рекомендацию только если `used_ai === true`.
-  При `fallback_ranked` карточка пишет «Рекомендация временно недоступна», и
-  Complete не отправляется. Сервер fallback при этом считает. Показ этого
-  ответа — предмет параллельного frontend hotfix, не этого commit.
+- Главная берёт первую рекомендацию, если массив не пуст. `used_ai=true`
+  подписан как AI. `fallback_ranked` подписан «Рекомендуемый шаг» и не
+  называется AI. Complete отправляется для показанной активности. Пустой
+  список показывает «Рекомендация временно недоступна».
 - Экран входа не содержит форму username/password. Такой login на сервере есть;
   клиент demo использует только demo-login.
 
@@ -46,13 +46,17 @@
 frontend/src/App.jsx            — сессия, главная, навигация
 frontend/src/screens.jsx        — login, объяснение, completion, HR, import
 frontend/src/api/client.js      — HTTP-клиент
-frontend/src/App.css            — desktop/mobile
+frontend/src/recommendationView.js — выбор первой рекомендации и подпись
+frontend/src/App.css            — desktop, tablet и mobile
 frontend/vite.config.js         — proxy /api → 127.0.0.1:8000
 ```
 
 ## Запуск
 
-Node 20.19+ либо 22.12+. Backend должен слушать порт 8000.
+Обычный запуск из корня репозитория: `python scripts/start.py`. Он поднимает
+backend и этот dev server. Зависимости нужно установить заранее.
+
+Отдельный frontend:
 
 ```powershell
 cd frontend
@@ -60,7 +64,7 @@ npm install
 npm run dev
 ```
 
-Сборка: `npm run build`. На integration milestone сборка прошла.
+Сборка и lint этого прогона: `npm run build` — PASS, `npm run lint` — PASS.
 
 Browser smoke того же milestone: Employee, completion, HR, import, mobile —
 PASS.

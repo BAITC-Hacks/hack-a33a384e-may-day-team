@@ -1,7 +1,6 @@
 # Career Quest frontend
 
-React/Vite клиент integration commit
-`29ab9f659da1bcd02774994746078aedb748bfd6`.
+React/Vite клиент после fallback `014d6c5` и UX `7c22ccd`.
 
 Клиент ходит в backend через `frontend/src/api/client.js`. Dev-server
 проксирует `/api` на `http://127.0.0.1:8000`.
@@ -23,14 +22,16 @@ React/Vite клиент integration commit
 - gaps и прогноз показывают `skill_id`, не display name;
 - блок недавней активности показывает `event_id`;
 - пункты «Карьерный путь» и «История» есть в навигации и отключены;
-- карточка рекомендации и Complete рисуются только при `used_ai=true`;
-  ответ `fallback_ranked` показывается как «Рекомендация временно недоступна».
+- непустая рекомендация показывается и при `fallback_ranked`, без AI-подписи.
 
 Подробности: [`../docs/FRONTEND.md`](../docs/FRONTEND.md).
 
 ## Запуск
 
-Нужен уже запущенный backend и Node 20.19+ либо 22.12+.
+Обычный запуск из корня: `python scripts/start.py`.
+
+Отдельный frontend, когда backend уже слушает порт 8000. Нужен Node 20.19+
+либо 22.12+. Зависимости launcher не устанавливает.
 
 ```powershell
 cd frontend
@@ -44,4 +45,4 @@ npm run dev
 npm run build
 ```
 
-`npm run build` на integration milestone — PASS.
+`npm run lint` и `npm run build` на final assembly — PASS.

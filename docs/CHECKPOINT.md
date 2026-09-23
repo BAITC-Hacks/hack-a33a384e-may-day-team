@@ -12,8 +12,10 @@ JSON-ключи, повторяющиеся CSV-заголовки и некон
 
 ## Done
 
-- Работа выполнена в отдельном worktree от `cc9deae`, без изменений frontend
-  worktree и `main`.
+- Проверенный fix `f09147b9a8c0967cf3b7b051daae312de231dd9a`
+  fast-forwarded в отдельный detached integration worktree от `cc9deae`.
+- Независимый code review ChatGPT для `f09147b` завершён со статусом PASS.
+  Независимый повтор полного тестового запуска ChatGPT не выполнялся.
 - До исправления 6 новых regression cases воспроизвели молчаливое принятие
   duplicate JSON keys, duplicate CSV headers и неконечных чисел.
 - JSON loader отклоняет повторный ключ на любой глубине объекта и сообщает имя
@@ -65,8 +67,9 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Результат M1.1: `23 passed`; есть одно предупреждение о deprecated alias внутри
-Starlette TestClient/AnyIO, не в коде проекта.
+Фактический локальный запуск Cursor в integration worktree: `23 passed`; есть
+одно предупреждение о deprecated alias внутри Starlette TestClient/AnyIO, не в
+коде проекта.
 
 Официальный dataset:
 
@@ -85,7 +88,8 @@ Smoke-check исходного неизменённого набора успе�
 - положительный прирост получили 111 сотрудников;
 - 308 положительных trace-записей, суммарный прирост уровней 308.
 
-Эти значения получены кодом M1, а не скопированы из research.
+Эти значения повторно получены локальным запуском Cursor на интегрированном
+коде M1.1, а не скопированы из research.
 
 Health:
 
@@ -96,18 +100,18 @@ Invoke-RestMethod http://127.0.0.1:8000/api/health
 
 ## Git
 
-Branch: `fix/backend-m1-validation`
+Integration worktree: detached HEAD от `origin/main`
 
 Base commit: `cc9deae81f52544bac1541f0c81f7a0ff129a1fd`
 
-Milestone commit message: `fix: reject ambiguous dataset inputs`
+Included fix SHA: `f09147b9a8c0967cf3b7b051daae312de231dd9a`
 
-Pushed: YES, `origin/fix/backend-m1-validation` (точный SHA смотреть в
-`git log`)
+Integration commit message: `docs: record backend M1.1 verification`
 
-REPO VERIFY: PENDING — требуется независимая проверка ChatGPT после push.
+Pushed: YES, `HEAD:main` без force push.
 
-Интеграция backend-ветки в `main`: PENDING.
+REPO VERIFY: PENDING — интеграционный commit после push ожидает проверки
+ChatGPT.
 
 ## Deploy
 
@@ -144,6 +148,6 @@ Status: не выполнялся. VPS, серверная PostgreSQL и DNS н�
 
 ## Next
 
-Независимо проверить backend M1.1. После проверки отдельно решить интеграцию
-`fix/backend-m1-validation` в `main`; автоматический merge/cherry-pick не
-выполнялся. Frontend продолжает свой отдельный согласованный этап.
+Независимо проверить интеграционный commit в `main`. Следующий backend-этап:
+persistence/API/auth/AI. Frontend продолжает свой отдельный согласованный этап;
+его готовность здесь не проверялась.

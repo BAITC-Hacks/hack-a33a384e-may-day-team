@@ -135,7 +135,7 @@ export function DetailScreen({
         <p className="dashboard-intro__eyebrow">РЕКОМЕНДУЕМЫЙ ШАГ</p>
         <h1>Рекомендация временно недоступна</h1>
         <p className="detail-lead">
-          Backend не вернул AI-рекомендацию для текущего профиля.
+          Сервер не вернул рекомендацию для текущего профиля.
         </p>
       </article>
     )
@@ -310,7 +310,7 @@ export function CompletionScreen({
         ) : (
           <>
             <h2>Рекомендация временно недоступна</h2>
-            <p>Профиль обновлён, но новый AI-ответ не получен.</p>
+            <p>Профиль обновлён, но новая рекомендация не получена.</p>
           </>
         )}
         <button className="button button--primary" onClick={onHome} type="button">

@@ -14,6 +14,10 @@ import {
 } from './components/Icons.jsx'
 import { careerQuestApi } from './api/client.js'
 import {
+  primaryRecommendation,
+  recommendationBadge,
+} from './recommendationView.js'
+import {
   CompletionScreen,
   DetailScreen,
   HrScreen,
@@ -160,19 +164,19 @@ function primaryImpact(recommendation) {
 }
 
 function RecommendationCard({
+  badge,
   loading,
   onComplete,
   onOpen,
   recommendation,
-  usedAi,
 }) {
-  if (!recommendation || !usedAi) {
+  if (!recommendation) {
     return (
       <article className="card recommendation-card">
         <p className="recommendation-badge">Статус рекомендации</p>
         <h2>Рекомендация временно недоступна</h2>
         <p className="recommendation-card__description">
-          Профиль загружен, но AI-рекомендация сейчас не получена.
+          Профиль загружен, но рекомендация сейчас не получена.
         </p>
       </article>
     )
@@ -187,8 +191,8 @@ function RecommendationCard({
   return (
     <article className="card recommendation-card">
       <p className="recommendation-badge">
-        <span className="desktop-only">AI · Рекомендуемый шаг</span>
-        <span className="mobile-only">AI · Следующий шаг</span>
+        <span className="desktop-only">{badge.desktop}</span>
+        <span className="mobile-only">{badge.mobile}</span>
       </p>
       <h2>{recommendation.title}</h2>
       <p className="recommendation-card__description">
@@ -364,10 +368,7 @@ function EmployeeHome({
   profile,
   recommendations,
 }) {
-  const recommendation =
-    recommendations?.used_ai === true
-      ? recommendations.recommendations?.[0] || null
-      : null
+  const recommendation = primaryRecommendation(recommendations)
   const alternative = recommendations?.comparison?.alternative_event || null
   const target = profile.primary_target
 
@@ -392,11 +393,11 @@ function EmployeeHome({
       <div className="dashboard-grid">
         <div className="dashboard-grid__primary">
           <RecommendationCard
+            badge={recommendationBadge(recommendations)}
             loading={loading}
             onComplete={onComplete}
             onOpen={onOpen}
             recommendation={recommendation}
-            usedAi={recommendations?.used_ai === true}
           />
           <AlternateStep alternateStep={alternative} onOpen={onOpen} />
         </div>
@@ -495,10 +496,7 @@ function App() {
   }
 
   async function completeActivity() {
-    const recommendation =
-      recommendations?.used_ai === true
-        ? recommendations.recommendations?.[0]
-        : null
+    const recommendation = primaryRecommendation(recommendations)
     if (!session?.employee_id || !recommendation) return
 
     const sessionDate =
@@ -583,10 +581,7 @@ function App() {
     role: session.role,
   }
   const navigation = hrZone ? hrNavigation : employeeNavigation
-  const activeRecommendation =
-    recommendations?.used_ai === true
-      ? recommendations.recommendations?.[0] || null
-      : null
+  const activeRecommendation = primaryRecommendation(recommendations)
 
   return (
     <div className="app-shell">

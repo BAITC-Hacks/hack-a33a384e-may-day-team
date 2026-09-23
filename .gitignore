@@ -1,0 +1,19 @@
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Private or generated hackathon artifacts
+/career_quest_dataset/
+/data/
+/artifacts/
+*.docx
+*.zip

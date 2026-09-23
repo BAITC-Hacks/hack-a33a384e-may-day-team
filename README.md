@@ -1,243 +1,300 @@
 # Career Quest
 
-Карьерный навигатор сотрудника для кейса Halyk Bank на HackAlem AI.
+AI career navigator для Halyk HackAlem AI.
 
-Продукт связывает профиль и требования следующего грейда с доступными
-активностями развития. Детерминированный код проверяет факты и ограничения, а
-AI-слой на следующем этапе будет сравнивать допустимые варианты и объяснять,
-почему выбранный шаг полезнее очевидной альтернативы.
+Документ описывает состояние integration commit
+`29ab9f659da1bcd02774994746078aedb748bfd6`.
 
-## Статус M1
+## Что решает
 
-Сейчас реализовано первое рабочее backend-ядро:
+Профиль сотрудника
+→ требования следующего грейда
+→ допустимые активности
+→ AI выбирает 1–3
+→ объясняет почему
+→ сотрудник завершает
+→ прогресс пересчитывается
+→ HR видит агрегаты.
 
-- загрузка и строгая проверка `skills.json`, `employees.json`, `events.json` и
-  `activity_history.csv`;
-- отклонение повторяющихся JSON-ключей, повторяющихся CSV-заголовков и
-  неконечных значений `duration_hours`;
-- бизнес-дата из `meta.as_of_date`, без зависимости от часов компьютера;
-- воспроизводимый расчёт актуальных навыков от последней оценки;
-- trace каждого фактического прироста без изменения исходной оценки;
-- следующий грейд текущей роли и разрывы из `role_profiles`;
-- проверка допустимости событий и объяснимые причины исключения;
-- candidate facts без выдуманного рейтинга и без AI;
-- диагностическая CLI-команда;
-- минимальный `GET /api/health`;
-- тесты на самостоятельно созданном синтетическом dataset.
-
-Профили и история через HTTP не открыты в M1. Health endpoint подтверждает только
-работу backend-процесса, а не готовность БД, AI или полного продукта.
-
-## Статус M2.1
-
-Добавлен код постоянного хранения, входа и защищённого API. Контракт описан в
-`docs/API.md`. Отметка выполнения моделирует завершение в прототипе и не
-подтверждает реальное обучение во внешней LMS.
-
-Локального PostgreSQL нет. Проверка выполнена через SSH-туннель к отдельным
-базам `career_quest_dev` и `career_quest_test` на VPS. Существующая база
-`hackathon` не изменялась, порт 5432 наружу не открывался. `serve` и Alembic
-читают корневой `.env`, если он есть; переменные процесса важнее. Без
-настроенной БД `GET /api/ready` возвращает 503.
-
-После заполнения локального `.env` backend запускается одной командой из корня
-репозитория:
-
-```powershell
-.\.venv\Scripts\python.exe -m backend.career_quest.serve
-```
-
-Команда применяет миграции только к локальной БД `career_quest_dev` или
-`career_quest_test`, загружает dataset и стартует API. Это не полный запуск
-сайта одной командой: frontend и production-конфигурация не входят в неё.
-`GET /api/employees/{id}/recommendations` просит OpenAI выбрать 1–3 занятия только
-из уже допустимых фактов. Без `OPENAI_API_KEY` или при невалидном ответе
-возвращается явный deterministic fallback, не ошибка запуска.
-
-## Основной сценарий продукта
-
-`профиль → требования следующего уровня → подходящие активности → AI-объяснение
-→ выполнение → обновление навыков и рекомендаций`.
-
-Основная траектория — следующий грейд текущей роли:
+Основная цель — следующий грейд текущей роли:
 `Junior → Middle → Senior → Lead`. Межролевой `career_goal` показывается
-отдельно и не меняет эту траекторию автоматически. Для Lead система не
-придумывает следующий грейд.
+отдельно и не подменяет эту цель. Для Lead следующий грейд не выдумывается.
+Выполнение требований не повышает сотрудника автоматически.
 
-Employee видит только своё развитие. HR должен видеть частые разрывы навыков,
+Employee видит только своё развитие. HR видит частые разрывы навыков,
 сотрудников без следующего шага и участие по активностям. Публичного рейтинга
-сотрудников не будет.
+сотрудников нет.
 
-## Требования к сдаче и оценке
+Отметка выполнения сохраняется на сервере и пересчитывает навыки. Это модель
+завершения в прототипе, а не подтверждение обучения во внешней LMS.
 
-Критерии официального ТЗ Halyk:
+## Главный сценарий demo
 
-- соответствие задаче и работоспособность — 25;
-- техническая реализация — 25;
-- README и воспроизводимость — 25;
-- ценность и применимость — 15;
-- потенциал развития и оригинальность — 10.
+Employee:
 
-Halyk отдельно требует запуск проекта одной командой. Полный однокомандный
-запуск ещё не реализован: команды M1 ниже запускают тесты, CLI и health
-по отдельности.
+1. demo login;
+2. профиль;
+3. target grade / gaps;
+4. AI recommendation;
+5. WHY THIS, NOT THAT;
+6. Complete;
+7. skill/progress update;
+8. новая recommendation.
 
-## Как работает расчёт
+HR:
 
-Исходная оценка навыков относится к `last_review_date`. Отсутствующий навык
-считается нулём. Затем в стабильном хронологическом порядке применяются только
-`completed` записи в окне:
+1. demo login HR;
+2. frequent gaps;
+3. employees without next step;
+4. participation;
+5. import hidden/test profile JSON + CSV.
+
+`POST /api/auth/demo-login` — вход для hackathon demo, не production
+authentication. Обычный `POST /api/auth/login` с username и password остаётся.
+
+## Почему это не ChatGPT-wrapper
+
+Детерминированный backend считает:
+
+- replay skills;
+- next grade;
+- gaps;
+- prerequisites;
+- eligibility;
+- event effects;
+- history facts.
+
+AI:
+
+- получает только допустимых candidates;
+- выбирает 1–3;
+- объясняет;
+- structured output;
+- server validates IDs/factors/ranks;
+- deterministic fallback.
+
+Модель не создаёт мероприятия, уровни, требования или историю. Невалидный
+ответ, чужой ID, таймаут, ошибка провайдера и отсутствие ключа не становятся
+рекомендацией модели: сервер возвращает явный `fallback_ranked`. Это не
+утверждение, что выбор AI всегда лучший.
+
+## Технологии
+
+Backend:
+
+- Python 3.10+
+- FastAPI
+- SQLAlchemy
+- Alembic
+- PostgreSQL
+
+AI:
+
+- OpenAI Responses API
+- Structured Outputs / strict JSON schema
+- `OPENAI_MODEL` configurable
+- Live smoke использовал `gpt-5.6-terra`
+- OpenAI SDK `2.8.1`
+
+Frontend:
+
+- React 19
+- Vite 8
+- CSS
+- Inter
+
+Auth:
+
+- server sessions
+- HttpOnly cookie
+- CSRF
+- Employee/HR server authorization
+- hackathon server-side demo-login
+
+## Архитектура
 
 ```text
-last_review_date < activity_history.date <= meta.as_of_date
+React/Vite
+   ↓
+FastAPI
+   ├ deterministic Career Engine
+   ├ AI recommendation layer
+   ├ auth / completion / HR / import
+   ↓
+PostgreSQL
+
+dataset → validated loader → engine
 ```
 
-Прирост:
+Расчётный engine не зависит от FastAPI, PostgreSQL и OpenAI. Контракт HTTP —
+`docs/API.md`.
 
-```text
-delta = max(0, min(gain, max_level - current))
-new_level = current + delta
-```
+## Dataset
 
-Активность никогда не понижает уже имеющийся уровень. Каждый запуск начинает
-пересчёт от исходной оценки, поэтому повторный вызов не начисляет прирост
-повторно.
+Подтверждённые объёмы синтетического dataset:
 
-Событие попадает в candidate facts, если оно:
+- 60 skills
+- 32 role profiles
+- 200 employees
+- 40 events
+- 2743 history rows
 
-- не mandatory;
-- рассчитано на текущую роль и грейд;
-- имеет выполненные prerequisites;
-- не находится `in_progress`;
-- раньше не было `completed`, кроме повторяемого `EV_036`;
-- является `self_paced` либо имеет сессию на/после бизнес-даты;
-- положительно влияет хотя бы на один разрыв следующего грейда.
+Raw official dataset в git не хранится. Загрузчик принимает каталог той же
+схемы: `skills.json`, `employees.json`, `events.json`,
+`activity_history.csv`.
 
-`no_show`, `declined` и `dropped` не блокируют событие навсегда. CLI показывает
-счётчики по событию и связанным навыкам, но не придумывает причины поведения.
+## AI
 
-## Требования
+- Модель задаётся `OPENAI_MODEL`.
+- Live smoke на синтетическом профиле: `gpt-5.6-terra`, latency 7883 ms.
+- SLA кейса на AI-рекомендацию: меньше 10 секунд. Этот smoke уложился в лимит.
+- Fallback при отсутствии ключа, timeout, ошибке провайдера и невалидном output.
+- В payload модели не входят полное имя, отдел, руководитель и сырая история.
+  Передаются роль, грейд, цель и факты допустимых активностей.
 
-- Python 3.10 или новее;
-- официальный dataset либо другой dataset той же схемы — только для CLI;
-- OpenAI, PostgreSQL и VPS для M1 не требуются.
+На этом commit экран сотрудника показывает карточку рекомендации и Complete
+только при `used_ai=true`. Ответ `fallback_ranked` сервер отдаёт, но UI пишет
+«Рекомендация временно недоступна». Исправление этого показа выполняется
+параллельным frontend hotfix и в этот docs-commit не входит.
 
-Проверенные прямые зависимости:
+## Проверки
 
-- FastAPI `0.116.1`;
-- Uvicorn `0.35.0`;
-- pytest `8.4.1`;
-- HTTPX `0.28.1` для теста API.
+M2.2 backend, когда PostgreSQL test DB была подключена:
+`42 passed`, `0 skipped`.
 
-## Установка
+Integration-проход на этом commit, в котором `DATABASE_URL` test DB не был
+подключён: `40 passed`, `5 skipped`.
+
+Пять PostgreSQL integration tests ранее отдельно прошли на PostgreSQL 14.24.
+Эти прогоны не складываются в формулировку «45 tests passed».
+
+Frontend: `npm run build` — PASS.
+
+Browser smoke по отчёту integration milestone:
+Employee, completion, HR, import, mobile — PASS.
+
+## Запуск
+
+Полный сайт одной командой не запускается. Отдельного launcher для backend и
+frontend в репозитории нет. Backend и frontend стартуют двумя командами.
+
+### Prerequisites
+
+- Python 3.10+
+- PostgreSQL
+- Node, совместимый с Vite 8: Node 20.19+ либо 22.12+
+- dataset той же схемы
+
+### Setup
 
 PowerShell:
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Linux/macOS:
+Для тестов вместо `requirements.txt` установите `requirements-dev.txt`.
 
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements-dev.txt
-```
-
-## Тесты
-
-PowerShell:
+Frontend:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q
+cd frontend
+npm install
 ```
 
-Тесты не используют официальный закрытый dataset, OpenAI, VPS или внешнюю БД.
+Linux/macOS: `python3 -m venv .venv`, затем `pip` из `.venv/bin`.
 
-## Диагностическая CLI
+### Env
 
-Укажите каталог, в котором лежат четыре файла dataset, и любой существующий
-`employee_id`. ID не ограничен шаблоном `E0001–E0200`.
+Скопируйте `.env.example` в локальный `.env`. Реальные пароли, URL с паролем и
+ключ OpenAI в репозиторий не кладутся.
 
-PowerShell:
+| Переменная | Назначение |
+|---|---|
+| `DATABASE_URL` | PostgreSQL для `career_quest_dev` или `career_quest_test` |
+| `DATASET_PATH` | Каталог четырёх файлов dataset |
+| `ALLOWED_ORIGINS` | Разрешённые Origin для cookie-запросов |
+| `COOKIE_SECURE` | Флаг `Secure` у session cookie |
+| `SESSION_TTL_HOURS` | Срок серверной сессии |
+| `DEMO_EMPLOYEE_ONE_USERNAME` | Логин первого demo employee |
+| `DEMO_EMPLOYEE_ONE_PASSWORD` | Пароль первого demo employee |
+| `DEMO_EMPLOYEE_ONE_ID` | `employee_id` первого demo employee |
+| `DEMO_EMPLOYEE_TWO_USERNAME` | Логин второго demo employee |
+| `DEMO_EMPLOYEE_TWO_PASSWORD` | Пароль второго demo employee |
+| `DEMO_EMPLOYEE_TWO_ID` | `employee_id` второго demo employee |
+| `DEMO_HR_USERNAME` | Логин demo HR |
+| `DEMO_HR_PASSWORD` | Пароль demo HR |
+| `OPENAI_API_KEY` | Ключ OpenAI, только на сервере |
+| `OPENAI_MODEL` | ID модели |
+| `OPENAI_TIMEOUT_SECONDS` | Таймаут вызова модели |
+
+`serve` и Alembic читают корневой `.env`, если он есть. Переменные процесса
+важнее файла. Миграции разрешены только для баз `career_quest_dev` и
+`career_quest_test`.
+
+### Backend
+
+Из корня репозитория:
 
 ```powershell
-$DATASET = "C:\path\to\career_quest_dataset"
-.\.venv\Scripts\python.exe -m backend.career_quest.cli $DATASET EMPLOYEE_ID
+.\.venv\Scripts\python.exe -m backend.career_quest.serve
 ```
 
-Команда выводит JSON с бизнес-датой, исходной и актуальной оценкой навыков,
-trace, основной целью, разрывами, candidate facts и причинами исключения каждого
-остального события.
+Команда применяет миграции к настроенной локальной БД Career Quest, загружает
+dataset и стартует API. Это не запуск сайта.
 
-Агрегированная повторная сверка dataset:
+### Frontend
+
+Во втором терминале:
 
 ```powershell
-.\.venv\Scripts\python.exe -m backend.career_quest.cli $DATASET --audit
+cd frontend
+npm run dev
 ```
 
-Ошибки содержат имя файла, запись, поле и причину. Загрузчик не исправляет
-данные автоматически.
+Dev-server Vite проксирует `/api` на `http://127.0.0.1:8000`.
 
-## Локальный health endpoint
-
-Запуск:
+Диагностика dataset без сайта:
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn backend.career_quest.api:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m backend.career_quest.cli DATASET_PATH EMPLOYEE_ID
+.\.venv\Scripts\python.exe -m backend.career_quest.cli DATASET_PATH --audit
 ```
 
-Проверка в другом терминале:
+## Безопасность и приватность
 
-```powershell
-Invoke-RestMethod http://127.0.0.1:8000/api/health
-```
+- `.env` в git ignore.
+- Ключ OpenAI только на сервере.
+- Пароль БД в репозиторий не входит.
+- Официальный raw dataset в репозиторий не входит.
+- Session cookie `HttpOnly`.
+- CSRF на изменяющих запросах.
+- Employee не открывает чужой профиль.
+- HR-маршруты защищены сервером.
+- AI payload не содержит полное имя, отдел, руководителя и сырую историю.
 
-Ответ:
+## Known limitations
 
-```json
-{"status":"ok","service":"career-quest-backend"}
-```
+- Demo-login — hackathon entry, не production authentication.
+- Навыки в UI показываются как `skill_id`: API профиля не отдаёт display name.
+- Недавняя активность на главной показывает `event_id`.
+- Отдельные экраны «Карьерный путь» и «История» не сделаны и не являются
+  обязательным сценарием; пункты навигации отключены.
+- На этом commit UI не рисует server-ranked fallback (`used_ai=false`).
+  Параллельный frontend hotfix в эту ветку не входит.
+- Deploy не выполнен: Nginx, DNS, systemd и live demo не проверялись.
+- Одной команды на весь сайт нет.
 
 ## Структура
 
 ```text
-backend/career_quest/models.py  — доменные структуры
-backend/career_quest/loader.py  — чтение и проверка dataset
-backend/career_quest/engine.py  — чистые расчётные функции
-backend/career_quest/cli.py     — диагностический JSON-вывод
-backend/career_quest/api.py     — только GET /api/health
-tests/                          — синтетические фикстуры и тесты
-docs/PROJECT.md                 — требования, факты и утверждённые решения
-docs/CHECKPOINT.md              — состояние текущего этапа
+backend/career_quest/   — loader, engine, API, auth, AI, completion, HR
+frontend/               — React/Vite клиент
+alembic/                — миграции PostgreSQL
+tests/                  — синтетические фикстуры и тесты
+docs/PROJECT.md         — требования и утверждённые решения
+docs/CHECKPOINT.md      — текущий milestone
+docs/API.md             — HTTP-контракт
+docs/FRONTEND.md        — состояние клиента
 ```
-
-Расчётные функции не зависят от FastAPI, БД и AI.
-
-## Данные и безопасность
-
-Выданный dataset синтетический, но по условиям хакатона не выносится за его
-пределы. Он не входит в git. Не коммитятся также DOCX/ZIP, исследовательские
-отчёты, `.env`, виртуальные окружения, кеши и результаты с исходными профилями.
-
-Проверенные объёмы официального набора: 60 навыков, 32 role profiles,
-200 сотрудников, 40 событий и 2 743 записи истории. JSON/CSV англоязычные;
-русский и казахский текст присутствует в README dataset, а не как переводы
-сущностей.
-
-## Ещё не реализовано
-
-- React/Vite и адаптивный интерфейс;
-- auth и серверное разграничение Employee/HR;
-- PostgreSQL, схема, миграции и persistence;
-- API профилей, истории, рекомендаций и HR-аналитики;
-- HTTP completion, транзакции и защита от двойного нажатия;
-- OpenAI-вызов, проверка ответа и маркированный fallback;
-- итоговый выбор и AI-объяснение 1–3 активностей;
-- загрузка дополнительных файлов через UI/API;
-- Nginx/systemd deploy, DNS и live demo;
-- PWA, нативные приложения, награды, OTP и админка.
-
-Это очередность разработки обязательного MVP, а не отказ от его следующих
-частей. Подробные границы и решения находятся в `docs/PROJECT.md`.

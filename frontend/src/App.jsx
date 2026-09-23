@@ -116,7 +116,7 @@ function ProgressCard() {
 }
 
 function RecommendationCard() {
-  const { recommendation } = demoDashboard
+  const { employee, recommendation } = demoDashboard
 
   return (
     <article className="card recommendation-card">
@@ -127,7 +127,7 @@ function RecommendationCard() {
       <h2>{recommendation.title}</h2>
       <p className="recommendation-card__description">
         <span className="desktop-only">
-          Усильте критический навык для перехода в Senior
+          Усильте критический навык для перехода в {employee.targetGrade}
         </span>
         <span className="mobile-only">{recommendation.description}</span>
       </p>

@@ -1,14 +1,16 @@
 // F1 presentation fixture only. This shape is not an API contract and contains
 // no real employee data; production values will come from the approved backend.
+const demoEmployee = {
+  firstName: 'Марат',
+  fullName: 'Марат Есенов',
+  initials: 'МЕ',
+  role: 'Backend Engineer',
+  currentGrade: 'Middle',
+  targetGrade: 'Senior',
+}
+
 export const demoDashboard = {
-  employee: {
-    firstName: 'Марат',
-    fullName: 'Марат Есенов',
-    initials: 'МЕ',
-    role: 'Backend Engineer',
-    currentGrade: 'Middle',
-    targetGrade: 'Senior',
-  },
+  employee: demoEmployee,
   progress: {
     completed: 6,
     total: 10,
@@ -17,13 +19,13 @@ export const demoDashboard = {
     title: 'System Design Fundamentals',
     desktopBadge: 'AI · Рекомендуемый шаг',
     mobileBadge: 'Лучший следующий шаг',
-    description: 'Критический навык для Senior',
+    description: `Критический навык для ${demoEmployee.targetGrade}`,
     skill: 'System Design',
     currentLevel: 2,
     projectedLevel: 3,
     targetLevel: 4,
     desktopReasons: [
-      'Критический навык для Senior',
+      `Критический навык для ${demoEmployee.targetGrade}`,
       'Предварительные требования выполнены',
       'История участия учтена',
     ],

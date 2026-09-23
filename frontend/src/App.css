@@ -917,3 +917,10 @@
     font-size: 28px;
   }
 }
+
+@media (max-width: 340px) {
+  .recommendation-card {
+    height: auto;
+    min-height: 354px;
+  }
+}

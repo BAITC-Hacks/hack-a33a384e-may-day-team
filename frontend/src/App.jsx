@@ -395,11 +395,18 @@ function EmployeeHome({
           <RecommendationCard
             badge={recommendationBadge(recommendations)}
             loading={loading}
-            onComplete={onComplete}
-            onOpen={onOpen}
+            onComplete={() => onComplete(recommendation)}
+            onOpen={
+              recommendation ? () => onOpen(recommendation.event_id) : undefined
+            }
             recommendation={recommendation}
           />
-          <AlternateStep alternateStep={alternative} onOpen={onOpen} />
+          <AlternateStep
+            alternateStep={alternative}
+            onOpen={
+              alternative ? () => onOpen(alternative.event_id) : undefined
+            }
+          />
         </div>
         <div className="dashboard-grid__secondary">
           <CriticalGaps
@@ -418,6 +425,8 @@ function EmployeeHome({
 
 function App() {
   const [screen, setScreen] = useState('login')
+  const [detailEventId, setDetailEventId] = useState(null)
+  const [homeFocus, setHomeFocus] = useState('top')
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [recommendations, setRecommendations] = useState(null)
@@ -426,6 +435,21 @@ function App() {
   const [importResult, setImportResult] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (screen === 'home' && homeFocus === 'recommendation') {
+      document.querySelector('.recommendation-card')?.scrollIntoView({ block: 'start' })
+    } else {
+      window.scrollTo(0, 0)
+    }
+    const heading = document.querySelector(
+      '#main-content h1, .login-screen h1, .import-screen h1',
+    )
+    if (heading instanceof HTMLElement) {
+      heading.tabIndex = -1
+      heading.focus({ preventScroll: true })
+    }
+  }, [homeFocus, screen])
 
   useEffect(() => {
     let active = true
@@ -495,9 +519,20 @@ function App() {
     }
   }
 
-  async function completeActivity() {
-    const recommendation = primaryRecommendation(recommendations)
-    if (!session?.employee_id || !recommendation) return
+  function recommendationById(eventId) {
+    const primary = primaryRecommendation(recommendations)
+    const alternative = recommendations?.comparison?.alternative_event
+    if (alternative?.event_id && alternative.event_id === eventId) return alternative
+    return recommendations?.recommendations?.find((item) => item.event_id === eventId) || primary
+  }
+
+  function openDetail(eventId) {
+    setDetailEventId(eventId || null)
+    setScreen('detail')
+  }
+
+  async function completeActivity(recommendation = primaryRecommendation(recommendations)) {
+    if (!session?.employee_id || !recommendation?.event_id) return
 
     const sessionDate =
       recommendation.format === 'self_paced'
@@ -523,6 +558,7 @@ function App() {
       setCompletion(result)
       setProfile(nextProfile)
       setRecommendations(nextRecommendations)
+      setDetailEventId(null)
       setScreen('completion')
     } catch (caught) {
       setError(caught.message)
@@ -582,6 +618,7 @@ function App() {
   }
   const navigation = hrZone ? hrNavigation : employeeNavigation
   const activeRecommendation = primaryRecommendation(recommendations)
+  const detailRecommendation = recommendationById(detailEventId)
 
   return (
     <div className="app-shell">
@@ -610,8 +647,8 @@ function App() {
           {screen === 'home' && profile && (
             <EmployeeHome
               loading={loading}
-              onComplete={completeActivity}
-              onOpen={() => setScreen('detail')}
+              onComplete={() => completeActivity(activeRecommendation)}
+              onOpen={openDetail}
               profile={profile}
               recommendations={recommendations}
             />
@@ -620,9 +657,9 @@ function App() {
             <DetailScreen
               loading={loading}
               onBack={() => setScreen('home')}
-              onComplete={completeActivity}
+              onComplete={() => completeActivity(detailRecommendation)}
               profile={profile}
-              recommendation={activeRecommendation}
+              recommendation={detailRecommendation}
               recommendationEnvelope={recommendations}
             />
           )}
@@ -630,7 +667,14 @@ function App() {
             <CompletionScreen
               completion={completion}
               nextRecommendation={activeRecommendation}
-              onHome={() => setScreen('home')}
+              onHome={() => {
+                setHomeFocus('top')
+                setScreen('home')
+              }}
+              onNext={() => {
+                setHomeFocus('recommendation')
+                setScreen('home')
+              }}
               profile={profile}
             />
           )}

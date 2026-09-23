@@ -142,40 +142,47 @@ export function DetailScreen({
   }
 
   const comparison = recommendationEnvelope?.comparison
+  const subjectImpact = impactFor(recommendation)
+  const chosen = comparison?.chosen_event || recommendation
   const alternative = comparison?.alternative_event
-  const chosenImpact = impactFor(recommendation)
+  const chosenImpact = impactFor(chosen)
   const alternativeImpact = impactFor(alternative)
   const targetGrade = profile.primary_target?.grade || 'следующей цели'
-  const factors = recommendation.factor_types || []
+  const viewingChosen = !chosen?.event_id || recommendation.event_id === chosen.event_id
+  const factors = viewingChosen ? recommendation.factor_types || [] : []
 
   return (
     <article className="detail-screen">
       <button className="text-button detail-back" onClick={onBack} type="button">
         <BackIcon /> К рекомендациям
       </button>
-      <p className="dashboard-intro__eyebrow">РЕКОМЕНДУЕМЫЙ ШАГ</p>
+      <p className="dashboard-intro__eyebrow">
+        {viewingChosen ? 'РЕКОМЕНДУЕМЫЙ ШАГ' : 'АЛЬТЕРНАТИВНЫЙ ШАГ'}
+      </p>
       <h1>{recommendation.title}</h1>
       <p className="detail-lead">Ближайший шаг к {targetGrade}</p>
       <div className="detail-levels">
         <div>
           <span>Сейчас</span>
-          <strong>{chosenImpact.currentLevel}</strong>
-          <small>{chosenImpact.skillId}</small>
+          <strong>{subjectImpact.currentLevel}</strong>
+          <small>{subjectImpact.skillId}</small>
         </div>
         <span aria-hidden="true">→</span>
         <div>
           <span>После выполнения</span>
-          <strong>{chosenImpact.newLevel}</strong>
+          <strong>{subjectImpact.newLevel}</strong>
           <small>прогноз backend</small>
         </div>
         <span aria-hidden="true">→</span>
         <div>
           <span>Требуется для {targetGrade}</span>
-          <strong>{chosenImpact.requiredLevel}</strong>
-          <small>{chosenImpact.skillId}</small>
+          <strong>{subjectImpact.requiredLevel}</strong>
+          <small>{subjectImpact.skillId}</small>
         </div>
       </div>
-      <p className="detail-note">{recommendation.reasoning_summary}</p>
+      <p className="detail-note">
+        {recommendation.reasoning_summary || comparison?.summary}
+      </p>
 
       <section className="card compare-card">
         <p className="compare-kicker">WHY THIS, NOT THAT?</p>
@@ -184,7 +191,7 @@ export function DetailScreen({
           <div className="compare-grid">
             <div className="compare-option compare-option--chosen">
               <span>Приоритет сейчас</span>
-              <h3>{recommendation.title}</h3>
+              <h3>{chosen.title}</h3>
             </div>
             <div className="compare-option">
               <span>Альтернатива</span>
@@ -198,7 +205,7 @@ export function DetailScreen({
               {alternativeImpact.currentLevel} / {alternativeImpact.requiredLevel}
             </strong>
             <span>Критические пробелы</span>
-            <strong>{recommendation.critical_gaps?.join(', ') || 'нет'}</strong>
+            <strong>{chosen.critical_gaps?.join(', ') || 'нет'}</strong>
             <strong>{alternative.critical_gaps?.join(', ') || 'нет'}</strong>
             <span>После выполнения</span>
             <strong>{chosenImpact.newLevel}</strong>
@@ -211,7 +218,7 @@ export function DetailScreen({
         )}
         {comparison?.summary && <p>{comparison.summary}</p>}
         <ul>
-          {[recommendation.tradeoff, ...factors].filter(Boolean).map((reason) => (
+          {[viewingChosen ? recommendation.tradeoff : null, ...factors].filter(Boolean).map((reason) => (
             <li key={reason}>
               <CheckIcon />
               <span>{reason}</span>
@@ -241,9 +248,13 @@ export function CompletionScreen({
   completion,
   nextRecommendation,
   onHome,
+  onNext,
   profile,
 }) {
   const firstChange = completion.skill_changes?.[0]
+  const requirement = profile.requirements?.find(
+    (item) => item.skill_id === firstChange?.skill_id,
+  )
   const nextImpact = impactFor(nextRecommendation)
   const targetGrade = profile.primary_target?.grade || 'следующей цели'
 
@@ -270,10 +281,16 @@ export function CompletionScreen({
                 <strong>{firstChange.level_after}</strong>
               </p>
             </div>
-            <div>
-              <span>Изменение уровня</span>
-              <strong>+{firstChange.delta}</strong>
-              <small>Рассчитано backend</small>
+            <div className="completion-meta">
+              <span>До требования {targetGrade}</span>
+              <strong>
+                {requirement
+                  ? `${requirement.missing_level} уровень`
+                  : `+${firstChange.delta}`}
+              </strong>
+              <small>
+                Целевой уровень — {requirement?.required_level ?? firstChange.level_after}
+              </small>
             </div>
             <p>
               Сервер подтвердил моделируемое выполнение от {completion.activity_date}.
@@ -313,7 +330,7 @@ export function CompletionScreen({
             <p>Профиль обновлён, но новая рекомендация не получена.</p>
           </>
         )}
-        <button className="button button--primary" onClick={onHome} type="button">
+        <button className="button button--primary" onClick={onNext || onHome} type="button">
           Посмотреть следующий шаг
         </button>
         <button className="text-button" onClick={onHome} type="button">
@@ -425,7 +442,7 @@ export function ImportScreen({ error, loading, onBack, onImport, result }) {
       <header className="import-top">
         <Brand />
         <button className="text-button" onClick={onBack} type="button">
-          К обзору HR
+          Назад к HR Dashboard
         </button>
       </header>
       <article>
@@ -483,6 +500,11 @@ export function ImportScreen({ error, loading, onBack, onImport, result }) {
           </section>
           <footer>
             <span>{result ? 'Импорт завершён' : 'Ожидаются два файла'}</span>
+            {result && (
+              <button className="button button--secondary" onClick={onBack} type="button">
+                Назад к HR Dashboard
+              </button>
+            )}
             <button
               className="button button--primary"
               disabled={loading || !employeesFile || !historyFile}

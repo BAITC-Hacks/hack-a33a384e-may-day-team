@@ -2,7 +2,7 @@
 
 Updated: 2026-09-23
 
-Current milestone: backend M2.1 — хранение, вход и защищённый API
+Current milestone: backend M2.1B — PostgreSQL проверен, контракт API уточнён
 
 ## Goal
 
@@ -20,29 +20,39 @@ Current milestone: backend M2.1 — хранение, вход и защищён
 - Повторный `Idempotency-Key` и повтор scheduled-сессии `EV_036` покрыты
   policy-тестами.
 - Исходный dataset не изменяется и не коммитится.
+- Кандидаты отдают каталожные `type`, `format`, `duration_hours` и
+  `upcoming_sessions`.
+- Флаг профиля называется `career_goal_differs_from_primary_target` и не меняет
+  primary target.
 
 ## Verification
 
-Локальный запуск Cursor на Python 3.12.7:
+M2.1 PostgreSQL: VERIFIED.
+
+Локальной службы PostgreSQL нет. VPS `194.32.141.87` использовался только как
+изолированный PostgreSQL host. Созданы `career_quest_dev` и `career_quest_test`,
+owner `career_quest_app`. База `hackathon` не изменялась. Порт 5432 слушает
+только localhost на VPS; наружу он не открывался. С локальной машины доступ
+шёл через SSH-туннель `127.0.0.1:55432`.
+
+PostgreSQL: 14.24. Python: 3.12.7. Python 3.10: NOT TESTED.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Результат: `30 passed, 5 skipped`. Пять PostgreSQL-тестов пропущены, потому что
-локальный PostgreSQL и `DATABASE_URL` отсутствуют. Их нельзя считать
-пройденными.
+Результат при `DATABASE_URL` на `career_quest_test`: `35 passed`, skipped
+PostgreSQL-тестов нет. Пять интеграционных тестов заменяют прежние заглушки:
+вход и права, сохранение и idempotency, два параллельных completion, одна
+scheduled-сессия `EV_036`, атомарный импорт.
 
-Python 3.10: NOT TESTED.
+Ручной smoke на `career_quest_dev`: `GET /api/ready` вернул 200, completion
+сохранился после перезапуска backend, повторный seed того же dataset не сбросил
+прогресс, другой dataset вернул `dataset_conflict`.
 
-Официальный dataset smoke повторно дал 318 применимых completed, 111
-сотрудников с приростом, 308 trace и суммарный прирост 308. Это проверка
-прежнего расчётного ядра, а не PostgreSQL.
+Официальный dataset до новых app-actions: 318 / 111 / 308 / 308.
 
-DB ACCESS: BLOCKED. Транзакции, сохранение после перезапуска backend и
-параллельные completion на PostgreSQL: NOT RUN.
-
-Независимый code review ChatGPT для M1/M1.1 остаётся прежним. M2.1 его ещё не
+Независимый code review ChatGPT для M1/M1.1 остаётся прежним. M2.1B его ещё не
 проходил. Независимый повтор тестового запуска ChatGPT не заявлялся.
 
 ## Current architecture
@@ -86,7 +96,9 @@ Branch: `feat/backend-m2-api`
 
 Base commit: `3ed7fd7357442199d31eabbe20bfc6738df9e44a`
 
-Commit message: `feat: add persistent employee workflow and protected API`
+Previous commit: `f070d34078189fcbe566879bd7102a238bb0cbfd`
+
+Commit message: `fix: verify persistent workflow on PostgreSQL`
 
 Pushed: YES, только `origin/feat/backend-m2-api`.
 
@@ -96,13 +108,11 @@ REPO VERIFY: PENDING — commit после push ожидает независи�
 
 ## Deploy
 
-Не выполнялся. VPS, серверная БД, DNS и Nginx не изменялись.
+Приложение не разворачивалось. Nginx, DNS и systemd не изменялись. На VPS
+созданы только две базы Career Quest и отдельная role.
 
 ## Known issues
 
-- DB ACCESS: BLOCKED; нужен локальный PostgreSQL для `career_quest_dev` или
-  `career_quest_test`.
-- PostgreSQL durability/concurrency: NOT RUN.
 - Python 3.10: NOT TESTED.
 - Полный однокомандный запуск сайта не реализован.
 - Frontend не проверялся.

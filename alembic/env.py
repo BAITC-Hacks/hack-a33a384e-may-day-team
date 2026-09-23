@@ -5,7 +5,9 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from backend.career_quest.orm import Base
-from backend.career_quest.settings import assert_safe_database
+from backend.career_quest.settings import assert_safe_database, load_local_env
+
+load_local_env()
 
 config = context.config
 target_metadata = Base.metadata

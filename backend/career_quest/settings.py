@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from sqlalchemy.engine.url import make_url
 
@@ -42,7 +43,17 @@ class Settings:
     demo_accounts: DemoAccounts | None
 
 
+def load_local_env() -> None:
+    if getattr(load_local_env, "done", False):
+        return
+    setattr(load_local_env, "done", True)
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
+
+
 def load_settings() -> Settings:
+    load_local_env()
     origins = tuple(
         item.strip()
         for item in os.environ.get(

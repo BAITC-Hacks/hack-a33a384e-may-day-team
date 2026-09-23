@@ -21,8 +21,10 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m backend.career_quest.serve
 ```
 
-`serve` требует локальные `DATABASE_URL`, `DATASET_PATH` и демо-учётные записи.
-Без `DATABASE_URL` PostgreSQL-тесты пропускаются и не считаются пройденными.
+`serve` и Alembic читают корневой `.env`, если он есть. Уже заданные переменные
+процесса важнее файла. Нужны `DATABASE_URL`, `DATASET_PATH` и демо-учётные
+записи. PostgreSQL-тесты выполняются только когда `DATABASE_URL` указывает на
+`career_quest_test`; без URL они пропускаются и не считаются пройденными.
 Контракт API: `docs/API.md`.
 
 ## Ограничения

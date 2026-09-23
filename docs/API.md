@@ -72,7 +72,7 @@ Employee получает только свой ID. HR получает любо
   "grade": "Junior",
   "career_goal": {"target_role": "Designer", "target_grade": "Senior"},
   "primary_target": {"role": "Engineer", "grade": "Middle"},
-  "career_goal_changes_primary_target": true,
+  "career_goal_differs_from_primary_target": true,
   "as_of_date": "2026-01-20",
   "skills": [{"skill_id": "S_ARCH", "current_level": 1}],
   "requirements": [{
@@ -97,14 +97,27 @@ Employee получает только свой ID. HR получает любо
 }
 ```
 
-`GET /api/employees/{employee_id}/candidates` возвращает факты M1 без ранжирования:
+`career_goal_differs_from_primary_target` равен `true`, когда сохранённая
+`career_goal` отличается от следующего грейда текущей роли. Это информационный
+флаг: primary target не меняется.
+
+`GET /api/employees/{employee_id}/candidates` возвращает факты M1 без ранжирования.
+У каждого кандидата есть каталожные `type`, `format`, `duration_hours` и
+`upcoming_sessions` — даты ISO из dataset, без выдуманных сессий:
 
 ```json
 {
   "used_ai": false,
   "selection_status": "not_ranked",
   "candidate_status": "candidates_available",
-  "candidates": [],
+  "candidates": [{
+    "event_id": "EV_EXAMPLE",
+    "title": "Synthetic activity",
+    "type": "course",
+    "format": "offline",
+    "duration_hours": 2,
+    "upcoming_sessions": ["2026-01-20"]
+  }],
   "exclusions": []
 }
 ```

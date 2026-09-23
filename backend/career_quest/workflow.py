@@ -162,7 +162,7 @@ def build_profile(state: EmployeeState) -> dict[str, object]:
         "primary_target": (
             None if target is None else {"role": target.role, "grade": target.grade}
         ),
-        "career_goal_changes_primary_target": bool(
+        "career_goal_differs_from_primary_target": bool(
             goal is not None
             and target is not None
             and (goal.target_role, goal.target_grade)
@@ -210,6 +210,13 @@ def build_candidates(state: EmployeeState) -> dict[str, object]:
             {
                 "event_id": item.event_id,
                 "title": item.title,
+                "type": state.catalog.events[item.event_id].event_type,
+                "format": state.catalog.events[item.event_id].event_format,
+                "duration_hours": state.catalog.events[item.event_id].duration_hours,
+                "upcoming_sessions": [
+                    session.isoformat()
+                    for session in state.catalog.events[item.event_id].upcoming_sessions
+                ],
                 "target": {
                     "role": item.target.role,
                     "grade": item.target.grade,

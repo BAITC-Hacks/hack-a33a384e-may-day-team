@@ -256,6 +256,19 @@ def test_completion_retry_is_not_a_second_gain(synthetic_dataset_path: Path) -> 
     login = _login(client, "employee.a")
     csrf = login.json()["csrf_token"]
     before = client.get("/api/employees/EMP-new-alpha").json()
+    assert before["career_goal_differs_from_primary_target"] is True
+    assert "career_goal_changes_primary_target" not in before
+    useful = next(
+        item
+        for item in client.get("/api/employees/EMP-new-alpha/candidates").json()[
+            "candidates"
+        ]
+        if item["event_id"] == "EV_USEFUL"
+    )
+    assert useful["type"] == "course"
+    assert useful["format"] == "self_paced"
+    assert useful["duration_hours"] == 2
+    assert useful["upcoming_sessions"] == []
     before_level = next(
         item["current_level"]
         for item in before["skills"]

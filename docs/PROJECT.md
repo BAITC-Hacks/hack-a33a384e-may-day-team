@@ -4,51 +4,179 @@ Updated: 2026-09-23
 
 ## Sources
 
-Confirmed from files that were read:
-
-- Local synthetic dataset, already unpacked, not stored in this repository: `C:\dev\hackathon-2026\career_quest_dataset\case_1\career_quest_dataset\`.
+- Official case brief, read in full on 2026-09-23. The DOCX is not stored in this repository.
+- Local synthetic dataset, not stored in this repository: `C:\dev\hackathon-2026\career_quest_dataset\case_1\career_quest_dataset\`.
 - Dataset README in English, Russian, and Kazakh. Dataset `meta.version` is `1.0`. Snapshot date in the data is `2026-10-01`.
 - Team process rules: `_prestart/WORK_RULES.md` (outside this repository).
 
-A separate official case brief file (PDF or page) was not in the workspace. Requirements below that are not in the dataset are taken from the milestone task for this case and are marked as such. Nothing beyond those sources is treated as approved.
+The official brief is the source for case requirements. The dataset is the source for data. Where they disagree, see Conflicts. Unapproved product decisions stay in the last section.
 
 ## Customer and case
 
-- Customer named in the milestone task: Halyk Bank.
-- Event named in the milestone task: HackAlem AI.
-- Case selected for the official repository: Career Quest.
+From the official brief:
+
+- Customer: АО Народный Банк Казахстана.
+- Hackathon: HackAlem AI.
+- Track: Halyk Bank.
+- Task title: AI для корпоративных продуктов.
+- Task type: product development, AI/LLM engineering, full-stack.
+- Tools allowed for the track: any models and services, cloud or local LLM, STT, TTS. No model is selected.
+- Two cases are scored separately and are not compared with each other: Career Quest, and Voice Router. This repository is for Career Quest only.
+- Official case name: Career Quest — платформа геймификации жизненного цикла сотрудника.
+
+The same brief says the core of Career Quest is recommendation quality and explainability, not the interface shell. Gamification is an overlay and is not part of the mandatory scope.
 
 ## Problem
 
-The case dataset describes employees, skill requirements by role and grade, development activities, and participation history. The milestone task requires a solution that helps an employee see a profile and career trajectory and receive the next development activities.
+Official Career Quest problem:
 
-A longer narrative problem statement was not present in the dataset files.
+An employee receives a stream of disconnected HR events with no visible link to their development. Training is completed formally on the deadline day. Voluntary activities have low attendance, while the people-development budget is fully spent.
+
+The brief's opening also describes a second, separate problem (Voice Router: a dialogue-scenario chooser that fails on live speech). That case is not in scope here.
 
 ## Users
 
-Named in the milestone task:
+Official Career Quest users:
 
-- Employee
-- HR
+- Primary user: an employee with 1–5 years of tenure. Scenario: sees their profile and trajectory, receives a next-step recommendation with an explanation of what it gives them, completes the activity, and sees progress move.
+- Second user: HR. Sees which competencies are lagging and who is dropping out of development.
 
-The dataset also records `assigned_by` values `self`, `manager`, and `hr`. A separate manager product view is not listed in the milestone must-have list.
+The track introduction also lists department heads, contact-center clients, operators, and supervisors. Those belong to the shared introduction for both cases. Career Quest section 3 does not add a manager, client, or operator view to the required users.
+
+The dataset records `assigned_by` values `self`, `manager`, and `hr`. That is a history field, not a required manager screen.
+
+Dataset tenure is wider than the primary persona. Hire dates in the file run from `2016-10-03` to `2026-08-27`. The brief does not say the dataset contains only 1–5 year employees.
+
+## Task
+
+Develop a web application with an AI layer. From the profile, history, and next-grade requirements, it selects relevant development steps and returns a justified recommendation plus updatable skill progress. HR receives a view of lagging competencies.
+
+Input stated in the brief: JSON/CSV profiles, events, history, and skills. Stated volume: 200 profiles, 40 events, 60 skills, 24 months of history. The audited files match those counts. The history file spans `2024-10-01`–`2026-09-30`.
+
+Output stated in the brief:
+
+- Profile with trajectory.
+- 1–3 recommended steps with a justification. The brief's example wording is: «System Design — 2 при требуемых 4 для Senior; активность закрывает разрыв, предыдущие две пройдены в срок». That sentence is an output example, not a checked row from the dataset.
+- Progress update after completion.
+- HR screen.
 
 ## Official must-have
 
-From the milestone task:
+| Requirement in the brief | How the brief says to check it |
+|---|---|
+| Profile and career trajectory | Open any employee. Role, grade, skills, completed activities, and available next steps are visible. |
+| AI recommendation of the next step | The system offers 1–3 relevant activities. |
+| Explanation | The justification relies on at least three factors. The brief names: grade, skill gaps, participation history, next-level requirements. |
+| Progress update | Mark an activity completed. Skill progress and the trajectory move. |
+| Simple HR view | Which skills lag most often, who has no recommended step, participation by activity. |
+| Test profiles | The jury uses three profiles, the same for every team, built so a single-factor rule fails. The solution loads extra profiles and history in the dataset format. At the defense the jury loads them. |
 
-- Employee profile and career trajectory.
-- AI recommendation of 1–3 next activities.
-- An explanation based on multiple factors.
-- Progress update after an activity is completed.
-- HR view.
-- Ability to load additional test profiles and history in the same format.
+Official wording for the explanation, not shortened: «Обоснование опирается минимум на три фактора — грейд, разрывы по навыкам, история участия, требования следующего уровня». The sentence requires at least three factors and names four. This file does not choose whether all four are mandatory.
 
-From the dataset README:
+Official hidden-profile example, not a dataset row: the employee's lowest skill is Public Speaking, history shows three skips of similar activities, and System Design is critical for the next grade. A recommendation of the form «бери минимальный навык» misses.
+
+Dataset README, still in force for the data:
 
 - Mandatory events are assigned by HR and are not a recommendation target.
-- Evaluation uses additional employee profiles and history records in the same format. The solution must be able to load them.
-- The milestone task adds: the jury will load unknown test profiles on which single-factor recommendation logic is specifically expected to fail.
+- Evaluation uses additional profiles and history in the same format. The solution must load them.
+- Skill growth is `gain` up to `max_level`, as stated on each event.
+
+## Optional
+
+Listed in the brief. Not in the mandatory part:
+
+- Internal currency and recognition.
+- Rewards catalog and exchanging points.
+- Recognition from colleagues.
+- Mentor and team mechanics.
+- Personal challenges.
+- An event builder for HR.
+- Attrition-risk forecast.
+- An extended HR dashboard.
+- Grade-transition modeling.
+- Embedding in a messenger or calendar.
+- Mobile adaptation.
+- A high-quality Kazakh and Russian interface localization.
+
+## Latency
+
+From the brief:
+
+- Interface response: up to 2 seconds.
+- AI recommendation: up to 10 seconds.
+
+## Privacy, security, and other constraints
+
+Cannot, from the brief:
+
+- A recommendation from a single profile field presented as AI. The justification must use several factors.
+- Public employee rankings by performance. The brief's reason: they motivate a small leader group and demotivate the majority who see an unreachable gap.
+- Mechanics around mandatory processes. The brief's example: points for timesheets.
+- Real personal data.
+
+Must account for, from the brief:
+
+- Privacy: internal contour. Engagement data are not visible to other employees without consent.
+- Security: separate employee and HR permissions.
+- Explainability: it is visible why a step was proposed and how advancement was calculated.
+- Infrastructure: the project starts with one command.
+- Voluntariness: coercion is the main predictor of failure for programs of this kind.
+
+Data rules from the brief:
+
+- The starter kit is issued on hackathon day.
+- Data are synthetic and must not be taken outside the hackathon.
+- Adding own data is allowed if the schema is kept.
+- The brief says the data are in English, with Kazakh and Russian translations. See Conflicts.
+
+Dataset rule that the brief does not repeat as a product ban: mandatory events are not recommendation targets. The brief's ban is mechanics around mandatory processes, with timesheets as the example. Both statements are kept. They are not treated as the same rule.
+
+## AI and explainability
+
+- The required product is a web application with an AI layer.
+- The core is recommendation quality and explainability, not the interface shell.
+- The explanation must show why the step was proposed.
+- Progress must show how advancement was calculated.
+- The track allows any cloud or local LLM, and STT/TTS. Career Quest does not name a model, and this file does not choose one.
+- STT and TTS are allowed track tools. The Career Quest must-have list does not require voice.
+
+## Launch and reproducibility
+
+The brief requires a repository and a README.
+
+Scoring for README and reproducibility, 25 points: the documentation lets a reader understand the project structure, technologies used, launch order, and main scenario, and the solution can be reproduced and checked from the repository.
+
+Infrastructure constraint: one-command launch.
+
+There is no application in this repository yet, so there is no launch command.
+
+## Evaluation criteria
+
+| Criterion in the brief | Points |
+|---|---|
+| Соответствие задаче и работоспособность. Fit to the task and whether the main stated scenario works. | 25 |
+| Техническая реализация. Approach, architecture, component interaction, use of AI/agentic AI and other technologies, and whether the implementation matches the stated logic. | 25 |
+| README и воспроизводимость. Documentation of structure, technologies, launch, and main scenario, plus the ability to reproduce and check the solution from the repository. | 25 |
+| Ценность и применимость решения. Whether the solution answers the stated problem, and practical applicability. | 15 |
+| Потенциал развития и оригинальность подхода. Further development, broader use, and justified unusual approaches. | 10 |
+| Total | 100 |
+
+Artifacts required by the brief: repository, README.
+
+## Conflicts
+
+CONFLICT 1. Language of the data.
+
+- Brief: «Данные на английском, а также переводы на казахский и русский.»
+- Dataset records: skill names, event titles, event descriptions, and employee names checked in the JSON/CSV files are English ASCII. No Kazakh or Russian fields were found inside `skills.json`, `employees.json`, `events.json`, or `activity_history.csv`.
+- Kazakh and Russian text is present in `README.kz.md` and `README.ru.md`.
+- Not resolved here.
+
+No conflict on volume. The brief's 200 profiles, 40 events, 60 skills, and 24 months of history match the audited files and the window `2024-10-01`–`2026-09-30`.
+
+DATASET INTERNAL, not a brief-versus-dataset conflict: the dataset README says an event is not repeated after `completed` except `EV_036`. The history file also has later rows after `completed` for `EV_001`, `EV_002`, and `EV_003`. The brief does not state this rule. It points detail to the starter-kit README. Not resolved here.
+
+AMBIGUITY inside the brief, not a dataset conflict: the explanation must use at least three factors, and the same sentence names four (grade, skill gaps, participation history, next-level requirements). Not resolved here.
 
 ## Dataset overview
 
@@ -107,7 +235,7 @@ Verified distributions:
 - `tenure_months` matches full months from `hire_date` to `2026-10-01` for all 200 employees.
 - Hire dates: `2016-10-03` – `2026-08-27`. Last review dates: `2026-01-05` – `2026-09-29`.
 - 114 employees are below the required level of at least one critical skill for their current grade.
-- Names, skill text, and event text checked as ASCII. The dataset READMEs exist in English, Russian, and Kazakh. UI copy in three languages is not specified beyond the `preferred_language` field.
+- Names, skill text, and event text checked as ASCII. `README.md`, `README.ru.md`, and `README.kz.md` are the English, Russian, and Kazakh dataset notes. Interface localization into Kazakh and Russian is optional in the brief, not a must-have. `preferred_language` in the employee file is `kk`, `ru`, or `en`.
 
 ### events.json
 
@@ -184,37 +312,30 @@ Stated in the dataset README and checked against the files:
 - 318 `completed` rows have a date after that employee's `last_review_date`. The README says those completions are not yet included in skill levels.
 - The README says new employees complete `EV_004` in their first month. The file contains 80 `completed` rows for `EV_004` and no other status for that event. First-month timing was not fully reconstructed in this audit.
 
-## Constraints recorded from available sources
-
-- Data are synthetic.
-- Treat `2026-10-01` as "today".
-- Mandatory activities are not recommendation targets.
-- Additional test profiles and history must load in the same format.
-- Single-factor recommendation logic is expected to fail on unknown jury profiles (milestone task).
-- Skill level after completion is capped by `max_level`.
-- A missing skill level means 0.
-
-Not found in the dataset files or READMEs, so not recorded as requirements:
-
-- A numeric latency limit.
-- A privacy or data-handling policy.
-- An access-control specification for Employee and HR separation. The milestone task requires an HR view and names both users. How access is separated is not specified.
-- A list of forbidden product mechanics beyond "mandatory events are not a recommendation target".
-- A numeric scoring rubric.
-
-Team reproducibility rule, from `WORK_RULES.md`, not from the case file: the project must be possible to run from this repository, and secrets stay out of git. There is no application to run yet.
-
 ## Decisions not yet approved
+
+The brief requires a web application, an AI layer, employee/HR permission separation, and one-command launch. It does not choose how those are built.
 
 TBD / REQUIRES USER DECISION:
 
 - Stack.
-- Auth.
+- Auth mechanism.
 - Database schema.
 - Recommendation architecture.
 - AI provider and model.
-- PWA.
+- PWA. Mobile adaptation is optional in the brief, not selected.
 - Admin.
 - Final UX.
 
 Do not treat any of those as chosen.
+
+## Documentation decisions
+
+This is a user organizational decision. It is not a Halyk requirement.
+
+Documentation language policy:
+
+- canonical README: Russian;
+- Kazakh and English README translations: final stage;
+- technical project documents: single version only;
+- translations must remain semantically equivalent to canonical README.

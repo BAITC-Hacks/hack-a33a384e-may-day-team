@@ -672,8 +672,10 @@
   }
 
   .progress-card__copy strong {
+    flex: 0 0 auto;
     font-size: 31px;
     line-height: 1.15;
+    white-space: nowrap;
   }
 
   .progress-card__copy span {

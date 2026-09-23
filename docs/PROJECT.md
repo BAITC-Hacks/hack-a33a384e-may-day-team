@@ -100,11 +100,12 @@ Employee видит собственное развитие. HR видит ча�
 
 ### Стек и эксплуатация
 
-- backend: FastAPI и Python 3.10+;
-- frontend: React 19 / Vite 8;
-- постоянное хранилище: PostgreSQL, SQLAlchemy, Alembic;
-- AI: OpenAI Responses API, модель из `OPENAI_MODEL`;
-- production-план: Nginx + systemd, без Docker. Deploy ещё не выполнен.
+- backend: FastAPI 0.116.1, Python 3.10+, SQLAlchemy 2.0.43, Alembic 1.16.5, psycopg 3.2.9;
+- frontend: React 19 / Vite 8, Inter, CSS, локальные SVG;
+- постоянное хранилище: PostgreSQL;
+- AI: OpenAI Responses API, OpenAI SDK 2.8.1, strict JSON Schema, модель из `OPENAI_MODEL`;
+- локальный запуск сайта: `python scripts/start.py` поднимает backend и Vite и не устанавливает зависимости;
+- production-план: Nginx, static React build, proxy `/api` на Uvicorn/FastAPI, PostgreSQL, systemd. Docker для MVP не требуется. Инфраструктура подготовлена; публичный live deploy не проверен. См. `docs/DEPLOYMENT.md`.
 
 Dataset передаётся загрузчику путём из `DATASET_PATH`. Абсолютного пути в коде
 нет. Raw dataset в git не хранится.
@@ -190,13 +191,15 @@ Model ID берётся из `OPENAI_MODEL`; проверка интеграци
 Embeddings, vector DB, NVIDIA и собственное обучение не нужны.
 
 Отличие продукта — проверяемый ответ на вопрос: «Почему это занятие, а не
-другая очевидная альтернатива?». Отдельный экран сравнения отложен до рабочего
-обязательного сценария.
+другая очевидная альтернатива?». Клиент открывает detail выбранной альтернативы.
+Fallback в интерфейсе не называется AI.
 
 ### Документация
 
-`README.md` — канонический русский README. `README.kz.md` и `README.en.md` в
-текущую сдачу не входят.
+Финальная документация: `README.md`, `README.kz.md`, `README.en.md`.
+`README.md` — канонический русский источник. Переводы следуют ему.
+Установка с нуля — `docs/SETUP.md`. Подготовленная инфраструктура —
+`docs/DEPLOYMENT.md`.
 
 Model ID задаётся `OPENAI_MODEL`. Live smoke использовал `gpt-5.6-terra`.
 Порядок deterministic fallback описан в `docs/API.md` и не является AI-score.
@@ -230,15 +233,21 @@ PostgreSQL 14 проверен через SSH-туннель: миграция, 
 ## D. Текущие ограничения
 
 Реализованы backend API, PostgreSQL, auth, AI recommendation, completion,
-HR overview/import и React/Vite клиент. Подробный статус — `docs/CHECKPOINT.md`.
+HR overview/import, responsive React/Vite клиент и `python scripts/start.py`.
+Клиент читает реальный API. Подробный статус — `docs/CHECKPOINT.md` и
+`docs/FRONTEND.md`.
+
+Breakpoints клиента: mobile `<768`, tablet `768–1199`, desktop `>=1200`.
 
 Остаётся:
 
-- hackathon demo-login рядом с обычным login;
+- hackathon demo-login рядом с обычным login; demo-login не является production auth;
 - `skill_id` в UI, потому что API профиля не отдаёт display name навыка;
+- недавняя активность показывает `event_id`;
 - отдельные экраны «Карьерный путь» и «История» не сделаны и не являются
   обязательным сценарием;
-- deploy, Nginx, systemd, DNS и live demo не выполнены.
+- публичный live deploy не проверен. Инфраструктура VPS описана в
+  `docs/DEPLOYMENT.md`.
 
 PWA, нативные приложения и награды не входят в обязательный объём.
 

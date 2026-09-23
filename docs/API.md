@@ -1,6 +1,6 @@
-# Career Quest API — M2.2
+# Career Quest API
 
-Технический контракт backend. Frontend в этом этапе не изменялся.
+Технический контракт backend. Frontend final E2E application использует этот API.
 Отметка выполнения моделирует завершение в прототипе и не подтверждает обучение
 во внешней системе. AI выбирает только из серверных candidate facts.
 

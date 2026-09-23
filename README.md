@@ -1,139 +1,142 @@
+[Русский](README.md) | [Қазақша](README.kz.md) | [English](README.en.md)
+
 # Career Quest
 
-AI career navigator для Halyk HackAlem AI.
-
-Документ описывает final assembly: launcher и проверка поверх UX
-`7c22ccd557d894ddeccd4148f4e23a2f4fa55d37`. Fallback UI вошёл в
-`014d6c5d20dd005af2f5a4987130922ebd343c82`. Docs source:
-`b90defe25dc6b78a22c3c34681ceabf12a3f7087`.
+Career Quest помогает сотруднику дойти до следующего грейда текущей роли: движок считает навыки, требования и допустимые активности, а OpenAI выбирает из этого списка 1–3 шага и объясняет выбор. Если модель недоступна, тот же сценарий продолжается через явный серверный fallback.
 
 ## Что решает
 
-Профиль сотрудника
-→ требования следующего грейда
-→ допустимые активности
-→ AI выбирает 1–3
-→ объясняет почему
-→ сотрудник завершает
-→ прогресс пересчитывается
-→ HR видит агрегаты.
-
-Основная цель — следующий грейд текущей роли:
-`Junior → Middle → Senior → Lead`. Межролевой `career_goal` показывается
-отдельно и не подменяет эту цель. Для Lead следующий грейд не выдумывается.
-Выполнение требований не повышает сотрудника автоматически.
-
-Employee видит только своё развитие. HR видит частые разрывы навыков,
-сотрудников без следующего шага и участие по активностям. Публичного рейтинга
-сотрудников нет.
-
-Отметка выполнения сохраняется на сервере и пересчитывает навыки. Это модель
-завершения в прототипе, а не подтверждение обучения во внешней LMS.
-
-## Главный сценарий demo
-
 Employee:
 
-1. demo login;
-2. профиль;
-3. target grade / gaps;
-4. AI recommendation;
-5. WHY THIS, NOT THAT;
-6. Complete;
-7. skill/progress update;
-8. новая recommendation.
+профиль → next grade → gaps → recommendation → WHY THIS, NOT THAT → Complete → recalculation.
 
 HR:
 
-1. demo login HR;
-2. frequent gaps;
-3. employees without next step;
-4. participation;
-5. import hidden/test profile JSON + CSV.
+gaps → employees without next step → participation → hidden/test profile import.
 
-`POST /api/auth/demo-login` — вход для hackathon demo, не production
-authentication. Обычный `POST /api/auth/login` с username и password остаётся.
+Основная цель — следующий грейд текущей роли: `Junior → Middle → Senior → Lead`. Межролевой `career_goal` показывается отдельно и не подменяет эту цель. Для Lead следующий грейд не выдумывается. Выполнение требований не повышает сотрудника автоматически. Публичного рейтинга сотрудников нет.
+
+Отметка выполнения сохраняется на сервере и пересчитывает навыки. Это модель завершения в прототипе, а не подтверждение обучения во внешней LMS.
+
+## Что уже работает
+
+На ветке `final/submission`:
+
+- Employee/HR demo login;
+- profile;
+- trajectory / next-grade requirements;
+- deterministic candidate engine;
+- OpenAI recommendation 1–3;
+- explanation;
+- fallback;
+- completion;
+- progress recalculation;
+- refreshed recommendations;
+- HR overview;
+- multipart import;
+- responsive frontend;
+- one-command launcher.
+
+`POST /api/auth/demo-login` — вход для hackathon demo. Обычный `POST /api/auth/login` с username и password тоже есть. Экран входа demo использует кнопки Employee и HR.
 
 ## Почему это не ChatGPT-wrapper
 
-Детерминированный backend считает:
+DETERMINISTIC CODE:
 
 - replay skills;
+- current levels;
 - next grade;
+- requirements;
 - gaps;
 - prerequisites;
 - eligibility;
 - event effects;
-- history facts.
+- participation facts.
 
 AI:
 
-- получает только допустимых candidates;
+- получает только разрешённых candidates;
+- сравнивает;
 - выбирает 1–3;
 - объясняет;
-- structured output;
-- server validates IDs/factors/ranks;
-- deterministic fallback.
+- structured JSON;
+- server-side validation.
 
-Модель не создаёт мероприятия, уровни, требования или историю. Невалидный
-ответ, чужой ID, таймаут, ошибка провайдера и отсутствие ключа не становятся
-рекомендацией модели: сервер возвращает явный `fallback_ranked`. Это не
-утверждение, что выбор AI всегда лучший.
+В payload модели не входят полное имя, отдел, руководитель и сырая история. Передаются роль, грейд, цель и факты допустимых активностей. Модель не создаёт мероприятия, уровни, требования или историю.
 
-## Технологии
+Fallback срабатывает при:
+
+- missing key;
+- timeout;
+- provider error;
+- invalid output.
+
+Сервер возвращает `selection_status=fallback_ranked` и `fallback_reason`: `missing_api_key`, `timeout`, `provider_error` или `invalid_ai_output`. Это не числовой AI-score.
+
+Frontend при `fallback_ranked` пишет «Рекомендуемый шаг» и не называет ответ AI. Подпись «AI · Рекомендуемый шаг» остаётся только при `used_ai=true`. Пустой список показывает «Рекомендация временно недоступна».
+
+## Архитектура
+
+```text
+Dataset
+  ↓
+Validated Loader
+  ↓
+Deterministic Career Engine
+  ↓
+FastAPI
+  ├ Auth / Sessions / CSRF
+  ├ Employee API
+  ├ Completion
+  ├ HR / Import
+  └ OpenAI Recommendation Layer
+  ↓
+PostgreSQL
+
+React/Vite → FastAPI
+```
+
+Расчётный engine не зависит от FastAPI, PostgreSQL и OpenAI. `GET /api/health` проверяет процесс backend. `GET /api/ready` проверяет соединение с PostgreSQL.
+
+## Stack
 
 Backend:
 
 - Python 3.10+
-- FastAPI
-- SQLAlchemy
-- Alembic
+- FastAPI 0.116.1
+- SQLAlchemy 2.0.43
+- Alembic 1.16.5
 - PostgreSQL
+- psycopg 3.2.9
 
 AI:
 
 - OpenAI Responses API
-- Structured Outputs / strict JSON schema
+- OpenAI SDK 2.8.1
+- strict JSON Schema
 - `OPENAI_MODEL` configurable
-- Live smoke использовал `gpt-5.6-terra`
-- OpenAI SDK `2.8.1`
+- live smoke: `gpt-5.6-terra`
 
 Frontend:
 
 - React 19
 - Vite 8
-- CSS
 - Inter
+- CSS
+- local SVG icons
 
 Auth:
 
-- server sessions
+- server-side sessions
 - HttpOnly cookie
 - CSRF
-- Employee/HR server authorization
-- hackathon server-side demo-login
-
-## Архитектура
-
-```text
-React/Vite
-   ↓
-FastAPI
-   ├ deterministic Career Engine
-   ├ AI recommendation layer
-   ├ auth / completion / HR / import
-   ↓
-PostgreSQL
-
-dataset → validated loader → engine
-```
-
-Расчётный engine не зависит от FastAPI, PostgreSQL и OpenAI. Контракт HTTP —
-`docs/API.md`.
+- Employee/HR authorization
 
 ## Dataset
 
-Подтверждённые объёмы синтетического dataset:
+Dataset синтетический.
+
+Подтверждённые размеры:
 
 - 60 skills
 - 32 role profiles
@@ -141,168 +144,143 @@ dataset → validated loader → engine
 - 40 events
 - 2743 history rows
 
-Raw official dataset в git не хранится. Загрузчик принимает каталог той же
-схемы: `skills.json`, `employees.json`, `events.json`,
-`activity_history.csv`.
+Raw official dataset в git не хранится. `DATASET_PATH` указывает на папку. В ней обязательно:
 
-## AI
+```text
+career_quest_dataset/
+├── skills.json
+├── employees.json
+├── events.json
+└── activity_history.csv
+```
 
-- Модель задаётся `OPENAI_MODEL`.
-- Live smoke на синтетическом профиле: `gpt-5.6-terra`, latency 7883 ms.
-- SLA кейса на AI-рекомендацию: меньше 10 секунд. Этот smoke уложился в лимит.
-- Fallback при отсутствии ключа, timeout, ошибке провайдера и невалидном output.
-- В payload модели не входят полное имя, отдел, руководитель и сырая история.
-  Передаются роль, грейд, цель и факты допустимых активностей.
+Содержимое official dataset в документацию не входит.
 
-На этом commit непустой `recommendations` показывается всегда.
-`used_ai=true` подписан «AI · Рекомендуемый шаг». `fallback_ranked` подписан
-«Рекомендуемый шаг» и не называется AI. Пустой список показывает
-«Рекомендация временно недоступна». Detail, сравнение и Complete работают
-для fallback-активности.
+## Запуск одной командой
 
-## Проверки
-
-M2.2 backend, когда PostgreSQL test DB была подключена:
-`42 passed`, `0 skipped`.
-
-Final assembly без подключённой test DB: `40 passed`, `5 skipped`.
-Пять PostgreSQL tests не запускались: `DATABASE_URL` не указывал на
-`career_quest_test`. Skipped не считаются passed.
-
-Frontend этого прогона: `npm run lint` — PASS, `npm run build` — PASS.
-
-`python scripts/start.py` поднял backend и Vite. `GET /api/health` вернул 200.
-При настроенной локальной DB `GET /api/ready` вернул 200. Frontend открылся
-на `http://127.0.0.1:5173`. Ctrl+Break завершил оба процесса, порты 8000 и
-5173 закрылись.
-
-## Запуск
-
-Из корня репозитория, после setup:
+После установки зависимостей, PostgreSQL, dataset и `.env`:
 
 ```powershell
 python scripts/start.py
 ```
 
-Команда запускает текущий backend entrypoint и `npm run dev`. Зависимости
-сама не устанавливает. Ctrl+C или Ctrl+Break останавливает оба процесса.
-Backend: `http://127.0.0.1:8000`. Frontend: `http://127.0.0.1:5173`.
+Launcher запускает backend и Vite. Зависимости не устанавливает. Ctrl+C или Ctrl+Break останавливает оба процесса.
 
-### Prerequisites
+Адреса: backend `http://127.0.0.1:8000`, frontend `http://127.0.0.1:5173`.
 
-- Python 3.10+
-- PostgreSQL
-- Node, совместимый с Vite 8: Node 20.19+ либо 22.12+
-- dataset той же схемы
-- установленные Python- и frontend-зависимости
+Final smoke на Windows: backend started, frontend started, `/api/health` → 200, `/api/ready` → 200, ports closed after stop. Launcher реализован cross-platform; фактический final smoke выполнен на Windows.
 
-### Setup
+Полная установка с чистого ПК: [docs/SETUP.md](docs/SETUP.md).
 
-PowerShell:
+## ENV
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Скопируйте `.env.example` в `.env`. Реальные секреты в репозиторий не кладутся. Полное объяснение — в [docs/SETUP.md](docs/SETUP.md).
+
+| Переменная | Обязательна | Назначение |
+|---|---|---|
+| `DATABASE_URL` | да, для рабочего запуска | PostgreSQL. Разрешены только `career_quest_dev` и `career_quest_test` |
+| `DATASET_PATH` | да, для рабочего запуска | Папка четырёх файлов dataset |
+| `ALLOWED_ORIGINS` | нет | Origin для cookie-запросов. Default: `http://127.0.0.1:5173,http://localhost:5173` |
+| `COOKIE_SECURE` | нет | `Secure` у session cookie. Default: `false` |
+| `SESSION_TTL_HOURS` | нет | Срок серверной сессии. Default: `12` |
+| `DEMO_EMPLOYEE_ONE_USERNAME` | вместе с остальными `DEMO_*` | Логин первого demo employee |
+| `DEMO_EMPLOYEE_ONE_PASSWORD` | вместе с остальными `DEMO_*` | Пароль первого demo employee |
+| `DEMO_EMPLOYEE_ONE_ID` | вместе с остальными `DEMO_*` | `employee_id` в загруженном dataset |
+| `DEMO_EMPLOYEE_TWO_USERNAME` | вместе с остальными `DEMO_*` | Логин второго demo employee |
+| `DEMO_EMPLOYEE_TWO_PASSWORD` | вместе с остальными `DEMO_*` | Пароль второго demo employee |
+| `DEMO_EMPLOYEE_TWO_ID` | вместе с остальными `DEMO_*` | `employee_id` в загруженном dataset |
+| `DEMO_HR_USERNAME` | вместе с остальными `DEMO_*` | Логин demo HR |
+| `DEMO_HR_PASSWORD` | вместе с остальными `DEMO_*` | Пароль demo HR |
+| `OPENAI_API_KEY` | нет | Ключ OpenAI, только на сервере. Пустое значение включает `fallback_ranked` |
+| `OPENAI_MODEL` | нет | ID модели. Default: `gpt-5.6-terra` |
+| `OPENAI_TIMEOUT_SECONDS` | нет | Таймаут вызова. Default: `7` |
+
+Пример URL без реального секрета:
+
+```text
+postgresql+psycopg://career_quest:CHANGE_ME@127.0.0.1:5432/career_quest_dev
 ```
 
-Для тестов вместо `requirements.txt` установите `requirements-dev.txt`.
+Если используется demo config, все `DEMO_*` должны быть заполнены. Frontend-секреты не нужны: `VITE_OPENAI_KEY` и `VITE_DATABASE_URL` не требуются и быть не должны.
 
-Frontend:
+## Build и тесты
 
-```powershell
-cd frontend
-npm install
-```
-
-Linux/macOS: `python3 -m venv .venv`, затем `pip` из `.venv/bin`.
-
-### Env
-
-Скопируйте `.env.example` в локальный `.env`. Реальные пароли, URL с паролем и
-ключ OpenAI в репозиторий не кладутся.
-
-| Переменная | Назначение |
-|---|---|
-| `DATABASE_URL` | PostgreSQL для `career_quest_dev` или `career_quest_test` |
-| `DATASET_PATH` | Каталог четырёх файлов dataset |
-| `ALLOWED_ORIGINS` | Разрешённые Origin для cookie-запросов |
-| `COOKIE_SECURE` | Флаг `Secure` у session cookie |
-| `SESSION_TTL_HOURS` | Срок серверной сессии |
-| `DEMO_EMPLOYEE_ONE_USERNAME` | Логин первого demo employee |
-| `DEMO_EMPLOYEE_ONE_PASSWORD` | Пароль первого demo employee |
-| `DEMO_EMPLOYEE_ONE_ID` | `employee_id` первого demo employee |
-| `DEMO_EMPLOYEE_TWO_USERNAME` | Логин второго demo employee |
-| `DEMO_EMPLOYEE_TWO_PASSWORD` | Пароль второго demo employee |
-| `DEMO_EMPLOYEE_TWO_ID` | `employee_id` второго demo employee |
-| `DEMO_HR_USERNAME` | Логин demo HR |
-| `DEMO_HR_PASSWORD` | Пароль demo HR |
-| `OPENAI_API_KEY` | Ключ OpenAI, только на сервере |
-| `OPENAI_MODEL` | ID модели |
-| `OPENAI_TIMEOUT_SECONDS` | Таймаут вызова модели |
-
-`serve` и Alembic читают корневой `.env`, если он есть. Переменные процесса
-важнее файла. Миграции разрешены только для баз `career_quest_dev` и
-`career_quest_test`. `scripts/start.py` вызывает тот же `serve` и отдельный
-`.env` не читает.
-
-Отдельный backend по-прежнему запускается так:
-
-```powershell
-.\.venv\Scripts\python.exe -m backend.career_quest.serve
-```
-
-Команда применяет миграции к настроенной локальной БД Career Quest, загружает
-dataset и стартует API.
-
-### Frontend
-
-Во втором терминале, если backend уже запущен отдельно:
+Frontend, воспроизводимая установка:
 
 ```powershell
 cd frontend
-npm run dev
+npm ci
+npm run build
+npm run lint
 ```
 
-Dev-server Vite проксирует `/api` на `http://127.0.0.1:8000`.
+На final assembly `npm run lint` и `npm run build` — PASS.
 
-Диагностика dataset без сайта:
+Backend:
 
 ```powershell
-.\.venv\Scripts\python.exe -m backend.career_quest.cli DATASET_PATH EMPLOYEE_ID
-.\.venv\Scripts\python.exe -m backend.career_quest.cli DATASET_PATH --audit
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+python -m pytest -q
 ```
 
-## Безопасность и приватность
+Final assembly: `40 passed`, `5 skipped`. Пять PostgreSQL-тестов пропущены, потому что `DATABASE_URL` не был направлен на `career_quest_test`. Skipped не считаются passed.
+
+Ранее, на PostgreSQL milestone при `DATABASE_URL` на `career_quest_test`: `42 passed`, `0 skipped`. Пять PostgreSQL integration tests проходили на PostgreSQL 14.24. Эти результаты не складываются.
+
+## Как проверить сценарий
+
+1. Открыть `http://127.0.0.1:5173`.
+2. Employee: профиль, next grade, gaps, рекомендация, объяснение, Complete, если сервер вернул рекомендацию.
+3. HR: gaps, сотрудники без следующего шага, participation, import JSON + CSV.
+4. `http://127.0.0.1:8000/api/health` — процесс backend.
+5. `http://127.0.0.1:8000/api/ready` — доступность PostgreSQL.
+
+Если у сохранённого demo-профиля нет допустимого следующего шага, рекомендации пустые и `selection_status` может быть `not_applicable`. Это состояние движка, а не отключение AI.
+
+## Безопасность
 
 - `.env` в git ignore.
-- Ключ OpenAI только на сервере.
-- Пароль БД в репозиторий не входит.
-- Официальный raw dataset в репозиторий не входит.
+- Секреты не коммитятся.
+- Ключ OpenAI только на backend.
+- Пароль БД остаётся на сервере или локальной машине.
+- Raw official dataset в репозиторий не входит.
 - Session cookie `HttpOnly`.
 - CSRF на изменяющих запросах.
-- Employee не открывает чужой профиль.
-- HR-маршруты защищены сервером.
-- AI payload не содержит полное имя, отдел, руководителя и сырую историю.
+- Роль проверяется на сервере.
+- Employee не открывает чужого сотрудника.
+- HR endpoints защищены на сервере.
+- AI payload исключает полное имя, отдел, руководителя и сырую историю.
 
 ## Known limitations
 
-- Demo-login — hackathon entry, не production authentication.
-- Навыки в UI показываются как `skill_id`: API профиля не отдаёт display name.
-- Недавняя активность на главной показывает `event_id`.
-- Отдельные экраны «Карьерный путь» и «История» не сделаны и не являются
-  обязательным сценарием; пункты навигации отключены.
-- Deploy не выполнен: Nginx, DNS, systemd и live demo не проверялись.
+- Hackathon demo login — не production auth.
+- UI показывает `skill_id`, где display name навыка API не отдаёт.
+- Недавняя активность показывает `event_id`.
+- Экраны Path и History намеренно не сделаны.
+- Публичный live deploy ещё не проверен.
 
-## Структура
+## Infrastructure
+
+Подготовлены Ubuntu 22.04, Nginx, HTTPS / Let's Encrypt, PostgreSQL и домен `hack.qazentra.com`. Предпочтительная схема: Nginx → static React build → `/api` proxy → Uvicorn/FastAPI → PostgreSQL. Для backend запланирован systemd. Docker для MVP не требуется.
+
+Career Quest final build не заявлен как публично развёрнутый, пока не выполнен live smoke. Подробности: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Ключевые файлы
 
 ```text
-backend/career_quest/   — loader, engine, API, auth, AI, completion, HR
-frontend/               — React/Vite клиент
-scripts/start.py        — локальный запуск backend и frontend
-alembic/                — миграции PostgreSQL
-tests/                  — синтетические фикстуры и тесты
-docs/PROJECT.md         — требования и утверждённые решения
-docs/CHECKPOINT.md      — текущий milestone
-docs/API.md             — HTTP-контракт
-docs/FRONTEND.md        — состояние клиента
+backend/career_quest/loader.py    — validated loader
+backend/career_quest/engine.py    — deterministic career engine
+backend/career_quest/ai_select.py — OpenAI layer и fallback
+backend/career_quest/api.py       — HTTP API
+backend/career_quest/serve.py     — миграции, seed, Uvicorn
+scripts/start.py                  — backend + Vite
+frontend/src/App.jsx              — сессия и экраны
+frontend/src/screens.jsx          — login, detail, HR, import
+frontend/src/api/client.js        — вызовы API
+alembic/                          — миграции PostgreSQL
+docs/SETUP.md                     — установка с нуля
+docs/API.md                       — HTTP-контракт
+docs/PROJECT.md                   — продуктовые и технические решения
+docs/CHECKPOINT.md                — фактический статус
 ```

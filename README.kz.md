@@ -257,7 +257,8 @@ Final assembly: `40 passed`, `5 skipped`. Бес PostgreSQL тесті skipped: 
 - Hackathon demo login — production auth емес.
 - API display name бермеген жерде UI `skill_id` көрсетеді.
 - Соңғы белсенділік `event_id` көрсетеді.
-- Path және History экрандары әдейі жасалмаған.
+- Карьерный путь — frontend-only, жүктелген profile бойынша: ағымдағы role/grade, primary target, progress, requirements және өзгеше болса personal career goal. Жаңа backend endpoints жоқ.
+- История — frontend-only, `profile.history` бойынша: date, event_id, status, completion_pct, origin. Fixtures жоқ. Path/History үшін 1280/390 browser smoke орындалмаған.
 - Жария live deploy әлі тексерілмеген.
 
 ## Infrastructure

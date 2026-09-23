@@ -52,7 +52,7 @@ Final UX smoke: HR PASS. Employee completion повторно не выполн�
 - Demo-login — hackathon entry, не production authentication.
 - UI показывает `skill_id`, где API профиля не отдаёт display name.
 - Недавняя активность показывает `event_id`.
-- Экраны Path и History не реализованы.
+- Карьерный путь и История реализованы frontend-only на загруженном profile. Новых backend endpoints нет. Fixtures нет. Browser smoke Path/History на 1280/390 не выполнялся.
 - Публичный live deploy не проверен.
 
 ## Repo verify

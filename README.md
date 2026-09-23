@@ -257,7 +257,8 @@ Final assembly: `40 passed`, `5 skipped`. Пять PostgreSQL-тестов пр�
 - Hackathon demo login — не production auth.
 - UI показывает `skill_id`, где display name навыка API не отдаёт.
 - Недавняя активность показывает `event_id`.
-- Экраны Path и History намеренно не сделаны.
+- Карьерный путь — frontend-only на уже загруженном profile: текущие role/grade, primary target, progress, requirements и личная career goal, если она отличается. Новых backend endpoints нет.
+- История — frontend-only на `profile.history`: date, event_id, status, completion_pct, origin. Fixtures не используются. Browser smoke Path/History на 1280/390 не выполнялся.
 - Публичный live deploy ещё не проверен.
 
 ## Infrastructure

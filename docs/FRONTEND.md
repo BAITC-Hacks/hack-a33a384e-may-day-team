@@ -32,8 +32,17 @@
 
 - Навыки и разрывы рисуются как `skill_id`. Display name в ответе профиля нет.
 - Недавняя активность на главной показывает `event_id` и статус.
-- «Карьерный путь» и «История» стоят в навигации с `aria-disabled`. Отдельных экранов нет.
 - Экран входа не содержит форму username/password. Такой login на сервере есть; клиент demo использует только demo-login.
+
+## Карьерный путь и История
+
+Оба экрана frontend-only и читают уже загруженный profile. Новых backend endpoints нет. Fixtures не используются.
+
+Карьерный путь: `profile.role` / `grade`, `primary_target`, progress, `requirements`, личная `career_goal`, если она отличается от primary target.
+
+История: `profile.history` — `date`, `event_id`, `status`, `completion_pct`, `origin`.
+
+Browser smoke этих экранов на 1280 и 390 не выполнялся.
 
 ## Стек и файлы
 
@@ -65,6 +74,8 @@ npm run lint
 ```
 
 Final assembly: `npm run build` PASS, `npm run lint` PASS.
+
+Path/History feature milestone: `npm run lint` PASS, `npm run build` PASS. Browser smoke этих экранов на 1280/390 не выполнялся.
 
 Earlier integration browser smoke: Employee, completion, HR, import, mobile — PASS.
 

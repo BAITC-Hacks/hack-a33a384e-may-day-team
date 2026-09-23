@@ -234,8 +234,12 @@ PostgreSQL 14 проверен через SSH-туннель: миграция, 
 
 Реализованы backend API, PostgreSQL, auth, AI recommendation, completion,
 HR overview/import, responsive React/Vite клиент и `python scripts/start.py`.
-Клиент читает реальный API. Подробный статус — `docs/CHECKPOINT.md` и
-`docs/FRONTEND.md`.
+Клиент читает реальный API. Карьерный путь и История — frontend-only экраны
+на загруженном profile: role/grade, primary target, progress, requirements,
+личная career goal если отличается; история — date, event_id, status,
+completion_pct, origin. Новых backend endpoints и fixtures нет. Browser smoke
+этих экранов на 1280/390 не выполнялся. Подробный статус — `docs/CHECKPOINT.md`
+и `docs/FRONTEND.md`.
 
 Breakpoints клиента: mobile `<768`, tablet `768–1199`, desktop `>=1200`.
 
@@ -244,8 +248,6 @@ Breakpoints клиента: mobile `<768`, tablet `768–1199`, desktop `>=1200`
 - hackathon demo-login рядом с обычным login; demo-login не является production auth;
 - `skill_id` в UI, потому что API профиля не отдаёт display name навыка;
 - недавняя активность показывает `event_id`;
-- отдельные экраны «Карьерный путь» и «История» не сделаны и не являются
-  обязательным сценарием;
 - публичный live deploy не проверен. Инфраструктура VPS описана в
   `docs/DEPLOYMENT.md`.
 

@@ -257,7 +257,8 @@ If the saved demo profile has no eligible next step, recommendations are empty a
 - Hackathon demo login is not production auth.
 - The UI shows `skill_id` where the API does not expose a skill display name.
 - Recent activity shows `event_id`.
-- Path and History screens are intentionally not implemented.
+- Career Path is frontend-only on the already loaded profile: current role/grade, primary target, progress, requirements, and a personal career goal when it differs. No new backend endpoints.
+- History is frontend-only on `profile.history`: date, event_id, status, completion_pct, origin. No fixtures. Browser smoke of Path/History at 1280/390 was not run.
 - Public live deploy has not been verified yet.
 
 ## Infrastructure

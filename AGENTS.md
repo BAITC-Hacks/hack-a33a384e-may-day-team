@@ -21,6 +21,16 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m uvicorn backend.career_quest.api:app --host 127.0.0.1 --port 8000
 ```
 
+Frontend F1:
+
+```powershell
+cd frontend
+npm install
+npm run dev -- --host 127.0.0.1
+npm run lint
+npm run build
+```
+
 ## Ограничения
 
 - Пользователь утверждает продуктовые и архитектурные решения. Не менять scope,
@@ -34,6 +44,13 @@ python -m venv .venv
 - Не коммитить `.env`, ключи, токены, пароли и другие секреты.
 - Не менять VPS, серверную БД, DNS и deploy без отдельного задания.
 - Документация обязана соответствовать фактически работающему коду.
+- Frontend F1 использует только
+  `frontend/src/data/demoDashboard.js`; это demo fixture, а не API-контракт.
+- Не переносить PNG-референсы в пользовательский экран и не изображать
+  отключённые F2-действия работающими.
+- До отдельного этапа интеграции frontend не должен придумывать endpoint,
+  рассчитывать карьерный прогресс или менять backend ради демонстрационных
+  значений.
 
 `README.md` — канонический русский README. До финального этапа не создавать и не
 обновлять `README.kz.md`/`README.en.md`. Это языковое правило не отменяет

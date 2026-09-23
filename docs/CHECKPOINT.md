@@ -2,13 +2,15 @@
 
 Updated: 2026-09-23
 
-Current milestone: M1 — утверждённый MVP и первое рабочее backend-ядро
+Current milestone: M1 backend + F1 frontend в отдельной ветке
 
 ## Goal
 
 Зафиксировать утверждённые продуктовые решения и реализовать проверяемое
 детерминированное ядро: загрузка dataset, актуальные навыки, следующий грейд,
 разрывы, допустимые candidate facts, диагностическая CLI и минимальный health.
+Параллельно, без изменения backend, перенести утверждённую главную сотрудника в
+React/Vite для desktop и mobile.
 
 ## Done
 
@@ -37,6 +39,11 @@ Current milestone: M1 — утверждённый MVP и первое рабо�
   исключения; режим `--audit` пересчитывает агрегаты.
 - FastAPI публикует только `GET /api/health`.
 - 17 тестов используют только самостоятельно созданные синтетические фикстуры.
+- В отдельной frontend-ветке создан React/Vite-интерфейс F1: оболочка, главная
+  сотрудника, desktop-сетка и мобильная компоновка с нижней навигацией.
+- Один явно маркированный fixture питает desktop/mobile. API, AI, БД и
+  серверные расчёты frontend не вызывает и не дублирует.
+- Неподключённые действия F2 отключены; PNG не встроены в страницу.
 
 ## Current architecture
 
@@ -48,10 +55,16 @@ JSON/CSV dataset path
 
 FastAPI
   → GET /api/health only
+
+Synthetic F1 fixture
+  → React/Vite employee home
+    ├─ desktop shell
+    └─ mobile layout
 ```
 
 Расчётный модуль не зависит от FastAPI, БД и AI. Текущий стек этапа:
 Python 3.10+, FastAPI 0.116.1, Uvicorn 0.35.0, pytest 8.4.1 и HTTPX 0.28.1.
+Frontend F1 использует React 19, Vite 8 и локальный Inter; связи с API пока нет.
 
 ## Changed files
 
@@ -73,6 +86,8 @@ Python 3.10+, FastAPI 0.116.1, Uvicorn 0.35.0, pytest 8.4.1 и HTTPX 0.28.1.
 - `tests/test_api.py`
 - `docs/PROJECT.md`
 - `docs/CHECKPOINT.md`
+- `docs/FRONTEND.md`
+- `frontend/`
 
 ## How to verify
 
@@ -118,6 +133,19 @@ Health:
 Invoke-RestMethod http://127.0.0.1:8000/api/health
 ```
 
+Frontend:
+
+```powershell
+cd frontend
+npm install
+npm run lint
+npm run build
+npm run dev -- --host 127.0.0.1
+```
+
+Визуально проверены viewport 1586×992 и 390×853. На ширинах 360, 768 и
+1440 px подтверждено отсутствие горизонтального переполнения.
+
 ## Git
 
 Branch: `main`
@@ -130,6 +158,20 @@ Pushed: YES, `origin/main` (точный SHA намеренно не запис�
 commit; смотреть `git log`)
 
 REPO VERIFY: PENDING — требуется независимая проверка ChatGPT после push.
+
+Frontend branch: `feat/career-quest-ui`
+
+Frontend base: `cc9deae81f52544bac1541f0c81f7a0ff129a1fd`
+
+Frontend milestone commit: смотреть `git log` (SHA не записывается внутрь
+создающего его commit).
+
+Frontend push target: `origin/feat/career-quest-ui`. Фактический результат push
+проверяется по remote и финальному отчёту: commit не может достоверно записать
+операцию, которая выполняется только после его создания.
+
+FRONTEND VERIFY: PENDING — после F1 требуется независимая проверка commit,
+diff и screenshots.
 
 ## Deploy
 
@@ -146,6 +188,8 @@ Status: не выполнялся. VPS, серверная PostgreSQL и DNS н�
 - Исходные повторы `EV_001`–`EV_003` после completed сохранены без исправления.
 - Числовые веса, подробная схема БД и точный OpenAI model ID не утверждены.
 - Health не означает готовность persistence, auth, AI или полного MVP.
+- F1 использует только синтетические данные представления. Переходы,
+  выполнение, auth и API-интеграция ещё не реализованы.
 
 ## Decisions
 
@@ -165,6 +209,7 @@ Status: не выполнялся. VPS, серверная PostgreSQL и DNS н�
 
 ## Next
 
-После независимой проверки M1: persistence/API/auth/AI, затем интерфейс.
-HTTP completion, транзакции и защита от двойного нажатия относятся к следующему
-этапу.
+После независимой проверки F1: отдельный этап F2 — вход, объяснение
+рекомендации и согласованный demo-результат выполнения. Backend-направление
+после проверки M1: persistence/API/auth/AI. HTTP completion, транзакции и защита
+от двойного нажатия относятся к отдельному серверному этапу.

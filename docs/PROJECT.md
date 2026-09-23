@@ -100,13 +100,15 @@ Employee видит собственное развитие. HR видит ча�
 
 ### Стек и эксплуатация
 
-- backend: FastAPI и Python 3.10+;
-- frontend: React/Vite;
+- backend: FastAPI 0.116.1, Python 3.10+, SQLAlchemy 2.0.43, Alembic 1.16.5, psycopg 3.2.9;
+- frontend: React 19 / Vite 8, Inter, CSS, локальные SVG;
 - постоянное хранилище: PostgreSQL;
-- production: Nginx + systemd, без Docker.
+- AI: OpenAI Responses API, OpenAI SDK 2.8.1, strict JSON Schema, модель из `OPENAI_MODEL`;
+- локальный запуск сайта: `python scripts/start.py` поднимает backend и Vite и не устанавливает зависимости;
+- production-план: Nginx, static React build, proxy `/api` на Uvicorn/FastAPI, PostgreSQL, systemd. Docker для MVP не требуется. Инфраструктура подготовлена; публичный live deploy не проверен. См. `docs/DEPLOYMENT.md`.
 
-В M1 реализовано только backend-ядро без БД. Dataset передаётся загрузчику
-параметром; абсолютного пути в коде нет.
+Dataset передаётся загрузчику путём из `DATASET_PATH`. Абсолютного пути в коде
+нет. Raw dataset в git не хранится.
 
 ### Интерфейс
 
@@ -116,9 +118,16 @@ Android/iOS-приложения сейчас не разрабатываютс�
 
 ### Вход и права
 
-Будут предсозданные демонстрационные учётные записи Employee/HR. Роль проверяет
-сервер; открытого переключателя «стать HR» не будет. Регистрация, SMS/OTP и
-отдельная админка не нужны. Auth реализуется после расчётного ядра.
+Сервер хранит сессию в HttpOnly cookie и проверяет CSRF. Роль берётся из
+учётной записи, не из тела запроса. Employee не читает чужой профиль. HR-маршруты
+закрыты сервером.
+
+Обычный вход — `POST /api/auth/login` с username и password.
+
+Для hackathon demo утверждён `POST /api/auth/demo-login` с телом
+`{"role":"employee"}` или `{"role":"hr"}`. Сервер сам выбирает настроенный
+аккаунт. Это demo entry хакатона, не production authentication. Регистрации,
+SMS/OTP и отдельной админки нет.
 
 ### Карьерная траектория
 
@@ -163,9 +172,10 @@ Android/iOS-приложения сейчас не разрабатываютс�
 возвращает отдельные фактические счётчики по событию и связанным навыкам, не
 приписывая сотруднику мотивацию.
 
-Выход M1 — candidate facts, а не итоговая AI-рекомендация. Числового рейтинга
-нет. Для каждого кандидата доступны цель, затрагиваемые и critical gaps,
-prerequisites, потенциальные изменения и факты участия. Отдельно различаются:
+Движок по-прежнему отдаёт candidate facts, а не выбор модели. Числового
+AI-score нет. Для каждого кандидата доступны цель, затрагиваемые и critical
+gaps, prerequisites, потенциальные изменения и факты участия. Отдельно
+различаются:
 
 - следующий грейд отсутствует;
 - требования цели уже выполнены;
@@ -173,60 +183,98 @@ prerequisites, потенциальные изменения и факты уч�
 
 ### AI
 
-Детерминированный код считает навыки, ограничения и полезный эффект. В
-следующем этапе OpenAI будет сравнивать только допустимые варианты и объяснять
-выбор по переданным фактам. Model ID задаётся конфигурацией и утверждается после
-проверки интеграции. Ответ валидируется сервером; fallback без AI явно
-маркируется. Модель не создаёт мероприятия, уровни, требования или историю.
+Детерминированный код считает навыки, ограничения и полезный эффект. OpenAI
+сравнивает только допустимые варианты и объясняет выбор по переданным фактам.
+Model ID берётся из `OPENAI_MODEL`; проверка интеграции использовала
+`gpt-5.6-terra`. Ответ валидируется сервером; fallback без AI явно маркируется.
+Модель не создаёт мероприятия, уровни, требования или историю.
 Embeddings, vector DB, NVIDIA и собственное обучение не нужны.
 
 Отличие продукта — проверяемый ответ на вопрос: «Почему это занятие, а не
-другая очевидная альтернатива?». Отдельный экран сравнения отложен до рабочего
-обязательного сценария.
+другая очевидная альтернатива?». Клиент открывает detail выбранной альтернативы.
+Fallback в интерфейсе не называется AI.
 
 ### Документация
 
-`README.md` — канонический русский README. `README.kz.md` и `README.en.md`
-создаются на финальном этапе. Правило о единственном обновляемом README
-относится только к языковым версиям: все затронутые технические документы
-`AGENTS.md`, `docs/PROJECT.md`, `docs/CHECKPOINT.md` обновляются обязательно.
+Финальная документация: `README.md`, `README.kz.md`, `README.en.md`.
+`README.md` — канонический русский источник. Переводы следуют ему.
+Установка с нуля — `docs/SETUP.md`. Подготовленная инфраструктура —
+`docs/DEPLOYMENT.md`.
 
-Числовые веса ранжирования, подробная схема БД и точный OpenAI model ID не
-утверждаются на M1.
+Model ID задаётся `OPENAI_MODEL`. Live smoke использовал `gpt-5.6-terra`.
+Порядок deterministic fallback описан в `docs/API.md` и не является AI-score.
 
-## D. Ещё не реализовано
+## E. M2.1: хранение и API
 
-- frontend и адаптивный интерфейс;
-- auth, серверные Employee/HR permissions и демонстрационные учётные записи;
-- PostgreSQL, схема, миграции и persistence;
-- публичные API профиля, истории, рекомендаций и HR-аналитики;
-- отметка выполнения через HTTP, транзакции и защита от двойного нажатия;
-- OpenAI-вызов, проверка AI-ответа и явно маркированный fallback;
-- окончательное сравнение/ранжирование 1–3 кандидатов;
-- обновление после выполнения активности в постоянном хранилище;
-- загрузка файлов через UI/API;
-- React/Vite, PWA и нативные приложения;
-- полный запуск проекта одной командой;
-- deploy, Nginx, systemd, DNS и live demo.
+Доменные dataclass-модели не заменены ORM-моделями. Новый слой хранит в
+PostgreSQL профили, историю, новые завершения, хеши паролей и серверные сессии.
+Справочники skills, events и role profiles читаются из переданного dataset.
+Исходная оценка и исторические строки отделены от завершений приложения:
+исторический replay M1 не меняется, а новые действия применяются отдельно и
+учитываются даже при `last_review_date == meta.as_of_date`.
 
-Это порядок разработки, а не удаление обязательных возможностей из MVP.
+Обычный запуск не удаляет таблицы. Повторный seed с тем же отпечатком dataset
+не дублирует данные и не сбрасывает прогресс; другой dataset не перезаписывает
+хранилище молча. Миграции разрешены только для баз `career_quest_dev` и
+`career_quest_test`.
 
-## Реализованная архитектура M1
+HTTP-контракт зафиксирован в `docs/API.md`. `GET /candidates` остаётся сырыми
+фактами с `used_ai=false`. `GET /recommendations` отправляет в OpenAI Responses
+API только роль, грейд, цель и допустимые факты занятий. Модель задаётся
+`OPENAI_MODEL`. В live smoke ответил `gpt-5.6-terra` за 7883 мс и вернул три
+ID из candidate set. Чужой ID, таймаут и ошибка провайдера дают
+`fallback_ranked` по прозрачному порядку фактов, без числового AI-score.
+Ключ в git не входит.
+
+PostgreSQL 14 проверен через SSH-туннель: миграция, seed, перезапуск, повтор
+запроса и два параллельных completion. Базы только `career_quest_dev` и
+`career_quest_test`. База `hackathon` не изменялась.
+
+## D. Текущие ограничения
+
+Реализованы backend API, PostgreSQL, auth, AI recommendation, completion,
+HR overview/import, responsive React/Vite клиент и `python scripts/start.py`.
+Клиент читает реальный API. Карьерный путь и История — frontend-only экраны
+на загруженном profile: role/grade, primary target, progress, requirements,
+личная career goal если отличается; история — date, event_id, status,
+completion_pct, origin. Новых backend endpoints и fixtures нет. Browser smoke
+этих экранов на 1280/390 не выполнялся. Подробный статус — `docs/CHECKPOINT.md`
+и `docs/FRONTEND.md`.
+
+Breakpoints клиента: mobile `<768`, tablet `768–1199`, desktop `>=1200`.
+
+Остаётся:
+
+- hackathon demo-login рядом с обычным login; demo-login не является production auth;
+- `skill_id` в UI, потому что API профиля не отдаёт display name навыка;
+- недавняя активность показывает `event_id`;
+- публичный live deploy не проверен. Инфраструктура VPS описана в
+  `docs/DEPLOYMENT.md`.
+
+PWA, нативные приложения и награды не входят в обязательный объём.
+
+## Реализованная архитектура
 
 ```text
 dataset path
     ↓
-validated loader (JSON/CSV → immutable domain objects)
+validated loader
     ↓
-pure deterministic engine
-    ├─ current skills + trace
-    ├─ next-grade target + gaps
-    └─ eligible candidate facts + exclusions
+deterministic Career Engine
     ↓
-diagnostic CLI
+PostgreSQL
 
-FastAPI → GET /api/health only
+React/Vite
+    ↓
+FastAPI
+    ├ auth / sessions / CSRF
+    ├ employee profile, recommendations, completion
+    ├ HR overview / import
+    └ AI recommendation layer
+         получает только допустимых candidates
+         validates IDs, factors, ranks
+         fallback без вызова модели как будто она ответила
 ```
 
-Расчётный модуль не зависит от FastAPI, PostgreSQL и OpenAI. Профили и история
-на M1 через HTTP не публикуются.
+Расчётный модуль не зависит от FastAPI, PostgreSQL и OpenAI.
+`GET /api/health` проверяет только процесс. Готовность БД — `GET /api/ready`.

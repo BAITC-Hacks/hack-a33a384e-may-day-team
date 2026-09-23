@@ -2,152 +2,67 @@
 
 Updated: 2026-09-23
 
-Current milestone: backend M1.1 — проверка неоднозначных входных данных
+Current branch: `final/submission`
 
-## Goal
+Assembly before this documentation pass: `23abab7f76b71e36683cb41a858835073c18d55b`
 
-Минимально закрыть замечания независимой проверки M1: отклонять повторяющиеся
-JSON-ключи, повторяющиеся CSV-заголовки и неконечный `duration_hours`, не меняя
-расчётный engine, API-контракты или scope MVP.
+This documentation commit is the HEAD of `final/submission` after `docs: finalize submission documentation`. Its parent is the assembly SHA above.
 
-## Done
+## Milestone SHA
 
-- Проверенный fix `f09147b9a8c0967cf3b7b051daae312de231dd9a`
-  fast-forwarded в отдельный detached integration worktree от `cc9deae`.
-- Независимый code review ChatGPT для `f09147b` завершён со статусом PASS.
-  Независимый повтор полного тестового запуска ChatGPT не выполнялся.
-- До исправления 6 новых regression cases воспроизвели молчаливое принятие
-  duplicate JSON keys, duplicate CSV headers и неконечных чисел.
-- JSON loader отклоняет повторный ключ на любой глубине объекта и сообщает имя
-  файла, поле `json` и повторившийся ключ.
-- CSV loader проверяет уникальность заголовков до чтения строк; корректная
-  обработка пустых optional fields сохранена.
-- `duration_hours` принимает только конечное положительное число; `NaN`,
-  `Infinity`, `-Infinity` и overflow вида `1e400` отклоняются.
-- `engine.py`, правила карьерного развития, зависимости и API не менялись.
-- Frontend разрабатывается отдельно; его состояние M1.1 не проверяет и не
-  подтверждает.
+- backend: `601d96d9d18fc92ddeb8068b3fa4a4ef25d87137`
+- frontend: `30608c2e355917e68847f630dae63368aabd7752`
+- integration: `29ab9f659da1bcd02774994746078aedb748bfd6`
+- fallback: `014d6c5d20dd005af2f5a4987130922ebd343c82`
+- UX: `7c22ccd557d894ddeccd4148f4e23a2f4fa55d37`
+- docs source: `b90defe25dc6b78a22c3c34681ceabf12a3f7087`
+- assembly: `23abab7f76b71e36683cb41a858835073c18d55b`
 
-## Current architecture
+## Works on final/submission
 
-```text
-JSON/CSV dataset path
-  → validated loader
-  → pure Python calculation engine
-  → diagnostic CLI
+- Employee/HR demo login
+- profile, trajectory, next-grade requirements
+- deterministic candidate engine
+- OpenAI recommendation 1–3, explanation, fallback
+- completion, progress recalculation, refreshed recommendations
+- HR overview and multipart import
+- responsive frontend
+- `python scripts/start.py`
 
-FastAPI
-  → GET /api/health only
-```
+## Verification
 
-Расчётный модуль не зависит от FastAPI, БД и AI. Текущий стек этапа:
-Python 3.10+, FastAPI 0.116.1, Uvicorn 0.35.0, pytest 8.4.1 и HTTPX 0.28.1.
+Final assembly without `DATABASE_URL` on `career_quest_test`: `40 passed`, `5 skipped`. Пять PostgreSQL tests не запускались. Skipped не входят в passed.
 
-## Changed files
+Earlier PostgreSQL milestone with `DATABASE_URL` on `career_quest_test`: `42 passed`, `0 skipped`. Пять PostgreSQL integration tests проходили на PostgreSQL 14.24. Прогоны не суммируются.
 
-- `backend/career_quest/loader.py`
-- `tests/test_loader_cli.py`
-- `README.md`
-- `AGENTS.md`
-- `docs/PROJECT.md`
-- `docs/CHECKPOINT.md`
+Проверенный runtime Python для этих записей: 3.12.7. Отдельный прогон на Python 3.10 не зафиксирован.
 
-## How to verify
+Frontend final assembly: `npm run lint` PASS, `npm run build` PASS.
 
-Установка:
+`python scripts/start.py` на Windows: backend started, frontend started, `GET /api/health` 200, `GET /api/ready` 200, ports closed after stop. Linux launcher smoke не выполнялся. Код launcher cross-platform.
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-```
+Live AI smoke backend milestone: модель `gpt-5.6-terra`, `used_ai=true`, latency 7883 ms, три ID из candidate set.
 
-Синтетические тесты:
+Earlier integration browser smoke: Employee, completion, HR, import, mobile — PASS.
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest -q
-```
+Final UX smoke: HR PASS. Employee completion повторно не выполнялся, потому что persisted demo profile вернул `not_applicable` / empty recommendations. Функциональным regression это не объявлено.
 
-Фактический локальный запуск Cursor в integration worktree: `23 passed`; есть
-одно предупреждение о deprecated alias внутри Starlette TestClient/AnyIO, не в
-коде проекта.
+## Known
 
-Официальный dataset:
+- Demo-login — hackathon entry, не production authentication.
+- UI показывает `skill_id`, где API профиля не отдаёт display name.
+- Недавняя активность показывает `event_id`.
+- Карьерный путь и История реализованы frontend-only на загруженном profile. Новых backend endpoints нет. Fixtures нет. Browser smoke Path/History на 1280/390 не выполнялся.
+- Публичный live deploy не проверен.
 
-```powershell
-$DATASET = "C:\path\to\career_quest_dataset"
-.\.venv\Scripts\python.exe -m backend.career_quest.cli $DATASET E0001 --audit
-```
+## Repo verify
 
-Smoke-check исходного неизменённого набора успешно подтвердил:
+`23abab7` independently inspected by ChatGPT: CODE/STRUCTURE PASS. Runtime claims remain based on Cursor final smoke.
 
-- 60 skills, 32 role profiles, 200 employees, 40 events, 2 743 history records;
-- окно истории `2024-10-01`–`2026-09-30`;
-- статусы: 2 178 completed, 16 in_progress, 160 dropped, 195 no_show,
-  104 declined, 90 overdue;
-- заново рассчитано 318 completed-записей после review до бизнес-даты;
-- положительный прирост получили 111 сотрудников;
-- 308 положительных trace-записей, суммарный прирост уровней 308.
-
-Эти значения повторно получены локальным запуском Cursor на интегрированном
-коде M1.1, а не скопированы из research.
-
-Health:
-
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn backend.career_quest.api:app --host 127.0.0.1 --port 8000
-Invoke-RestMethod http://127.0.0.1:8000/api/health
-```
-
-## Git
-
-Integration worktree: detached HEAD от `origin/main`
-
-Base commit: `cc9deae81f52544bac1541f0c81f7a0ff129a1fd`
-
-Included fix SHA: `f09147b9a8c0967cf3b7b051daae312de231dd9a`
-
-Integration commit message: `docs: record backend M1.1 verification`
-
-Pushed: YES, `HEAD:main` без force push.
-
-REPO VERIFY: PENDING — интеграционный commit после push ожидает проверки
-ChatGPT.
+Этот documentation commit после push ожидает независимой проверки. REPO VERIFY: PENDING.
 
 ## Deploy
 
-URL: отсутствует
+Infrastructure prepared: Ubuntu 22.04, Nginx, HTTPS / Let's Encrypt, PostgreSQL, domain `hack.qazentra.com`. systemd для backend запланирован. Docker для MVP не требуется.
 
-Status: не выполнялся. VPS, серверная PostgreSQL и DNS не изменялись.
-
-## Known issues
-
-- Локальная проверка выполнена на Python 3.12.7.
-- Python 3.10: NOT TESTED — этот runtime отсутствует на машине.
-- Полный однокомандный запуск, требуемый Halyk, ещё не реализован.
-- Frontend выполняется в отдельной ветке/worktree; его готовность не проверена.
-- JSON/CSV сущности англоязычные; RU/KZ находятся только в README dataset.
-- Исходные повторы `EV_001`–`EV_003` после completed сохранены без исправления.
-- Числовые веса, подробная схема БД и точный OpenAI model ID не утверждены.
-- Health не означает готовность persistence, auth, AI или полного MVP.
-
-## Decisions
-
-- Продукт: карьерный навигатор Employee с отдельной HR-аналитикой и без
-  публичного рейтинга.
-- Стек: FastAPI + React/Vite + PostgreSQL; production Nginx + systemd без
-  Docker.
-- Одно адаптивное русскоязычное веб-приложение; без PWA и native apps сейчас.
-- Предсозданные Employee/HR accounts и серверная проверка прав; auth следующим
-  этапом.
-- Основная цель — следующий грейд текущей роли; cross-role `career_goal`
-  показывается отдельно; автоматического повышения нет.
-- OpenAI позже сравнивает только допустимые факты; model ID конфигурируется и
-  проверяется при интеграции; embeddings/vector DB/custom training не нужны.
-- Канонический README русский, KZ/EN версии отложены до финала; все затронутые
-  технические документы обновляются.
-
-## Next
-
-Независимо проверить интеграционный commit в `main`. Следующий backend-этап:
-persistence/API/auth/AI. Frontend продолжает свой отдельный согласованный этап;
-его готовность здесь не проверялась.
+Career Quest final build is not claimed as publicly deployed. Live smoke публичного сайта не выполнялся. См. `docs/DEPLOYMENT.md`.

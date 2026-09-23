@@ -11,4 +11,14 @@ def test_health_only_confirms_backend_process() -> None:
         "status": "ok",
         "service": "career-quest-backend",
     }
-    assert {route.path for route in app.routes} == {"/api/health"}
+    assert "/api/health" in {route.path for route in app.routes}
+
+
+def test_ready_does_not_claim_database_without_configuration(monkeypatch) -> None:
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATASET_PATH", raising=False)
+    response = TestClient(app).get("/api/ready")
+
+    assert response.status_code == 503
+    assert response.json()["code"] == "database_unavailable"
+    assert "://" not in response.text

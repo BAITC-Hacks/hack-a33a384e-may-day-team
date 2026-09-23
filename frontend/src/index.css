@@ -1,0 +1,56 @@
+:root {
+  --color-accent: #087f5b;
+  --color-accent-soft: #eaf4ef;
+  --color-background: #f5f7f6;
+  --color-surface: #ffffff;
+  --color-text: #172b26;
+  --color-text-muted: #596963;
+  --color-border: #e2e8e4;
+  --shadow-card: 0 8px 28px rgba(22, 52, 44, 0.035);
+  color: var(--color-text);
+  background: var(--color-background);
+  font-family:
+    'Inter Variable',
+    Inter,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--color-background);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100svh;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #006b4d;
+  outline-offset: 3px;
+}

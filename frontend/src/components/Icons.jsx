@@ -138,6 +138,62 @@ export function ArrowRightIcon({ className = '' }) {
   )
 }
 
+export function BackIcon({ className = '' }) {
+  return (
+    <IconFrame className={className}>
+      <path
+        d="M19 12H5m6-6-6 6 6 6"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </IconFrame>
+  )
+}
+
+export function UserIcon({ className = '' }) {
+  return (
+    <IconFrame className={className}>
+      <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M5.5 19.2a6.5 6.5 0 0 1 13 0"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </IconFrame>
+  )
+}
+
+export function UsersIcon({ className = '' }) {
+  return (
+    <IconFrame className={className}>
+      <circle cx="9" cy="8" r="2.6" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="16" cy="9" r="2.2" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M3.8 18.5a5.2 5.2 0 0 1 10.4 0M13.2 18.5a4.4 4.4 0 0 1 6.8-2.2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+    </IconFrame>
+  )
+}
+
+export function BarsIcon({ className = '' }) {
+  return (
+    <IconFrame className={className}>
+      <path
+        d="M5 19V11m7 8V5m7 14v-6"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </IconFrame>
+  )
+}
+
 export function ChevronDownIcon({ className = '' }) {
   return (
     <IconFrame className={className}>

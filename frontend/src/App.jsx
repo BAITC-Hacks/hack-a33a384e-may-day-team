@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import './App.css'
 import {
   ArrowRightIcon,
+  BarsIcon,
   CheckIcon,
   ChevronDownIcon,
   CodeIcon,
@@ -11,16 +13,22 @@ import {
   PathIcon,
 } from './components/Icons.jsx'
 import { demoDashboard } from './data/demoDashboard.js'
+import {
+  CompletionScreen,
+  DetailScreen,
+  HrScreen,
+  ImportScreen,
+  LoginScreen,
+} from './screens.jsx'
 
-const navigation = [
-  { label: 'Главная', shortLabel: 'Главная', Icon: HomeIcon, active: true },
-  {
-    label: 'Карьерный путь',
-    shortLabel: 'Путь',
-    Icon: PathIcon,
-    active: false,
-  },
-  { label: 'История', shortLabel: 'История', Icon: HistoryIcon, active: false },
+const employeeNavigation = [
+  { id: 'home', label: 'Главная', shortLabel: 'Главная', Icon: HomeIcon },
+  { id: 'path', label: 'Карьерный путь', shortLabel: 'Путь', Icon: PathIcon },
+  { id: 'history', label: 'История', shortLabel: 'История', Icon: HistoryIcon },
+]
+
+const hrNavigation = [
+  { id: 'hr', label: 'Обзор HR', shortLabel: 'HR', Icon: BarsIcon },
 ]
 
 function Brand() {
@@ -32,17 +40,18 @@ function Brand() {
   )
 }
 
-function UserIdentity({ showName = false }) {
-  const { employee } = demoDashboard
-
+function UserIdentity({ person, showName = false }) {
   return (
     <div className="user-identity">
       <span className="avatar" aria-hidden="true">
-        {employee.initials}
+        {person.initials}
       </span>
       {showName && (
         <>
-          <span className="user-identity__name">{employee.fullName}</span>
+          <span className="user-identity__name">
+            {person.fullName || person.name}
+            {person.role === 'HR' ? ' · HR' : ''}
+          </span>
           <ChevronDownIcon className="user-identity__chevron" />
         </>
       )}
@@ -50,41 +59,50 @@ function UserIdentity({ showName = false }) {
   )
 }
 
-function Navigation({ mobile = false }) {
+function Navigation({ activeId, items, mobile = false, onSelect }) {
   return (
     <nav
       className={mobile ? 'bottom-navigation' : 'sidebar-navigation'}
       aria-label="Основная навигация"
     >
-      {navigation.map(({ active, Icon, label, shortLabel }) =>
-        active ? (
-          <a
-            className={mobile ? 'bottom-navigation__item is-active' : 'sidebar-navigation__item is-active'}
-            href="#main-content"
-            key={label}
-            aria-current="page"
+      {items.map(({ Icon, id, label, shortLabel }) => {
+        const active = id === activeId
+        const className = mobile
+          ? 'bottom-navigation__item'
+          : 'sidebar-navigation__item'
+        if (!active && id !== 'home' && id !== 'hr') {
+          return (
+            <span
+              aria-disabled="true"
+              className={className}
+              key={id}
+              title="Для этого раздела нет утверждённого экрана"
+            >
+              <Icon className="navigation-icon" />
+              <span>{mobile ? shortLabel : label}</span>
+            </span>
+          )
+        }
+
+        return (
+          <button
+            aria-current={active ? 'page' : undefined}
+            className={active ? `${className} is-active` : className}
+            key={id}
+            onClick={() => onSelect(id)}
+            type="button"
           >
             <Icon className="navigation-icon" />
             <span>{mobile ? shortLabel : label}</span>
-          </a>
-        ) : (
-          <span
-            aria-disabled="true"
-            className={mobile ? 'bottom-navigation__item' : 'sidebar-navigation__item'}
-            key={label}
-            title="Раздел будет подключён на следующем этапе"
-          >
-            <Icon className="navigation-icon" />
-            <span>{mobile ? shortLabel : label}</span>
-          </span>
-        ),
-      )}
+          </button>
+        )
+      })}
     </nav>
   )
 }
 
-function ProgressCard() {
-  const { completed, total } = demoDashboard.progress
+function ProgressCard({ progress }) {
+  const { completed, total } = progress
   const percentage = (completed / total) * 100
 
   return (
@@ -115,8 +133,8 @@ function ProgressCard() {
   )
 }
 
-function RecommendationCard() {
-  const { employee, recommendation } = demoDashboard
+function RecommendationCard({ completed, onComplete, onOpen, recommendation }) {
+  const { employee } = demoDashboard
 
   return (
     <article className="card recommendation-card">
@@ -173,23 +191,20 @@ function RecommendationCard() {
       </ul>
 
       <div className="recommendation-actions">
-        <button
-          className="button button--primary"
-          disabled
-          title="Переход будет подключён на этапе F2"
-          type="button"
-        >
+        <button className="button button--primary" onClick={onOpen} type="button">
           <span className="desktop-only">Подробнее</span>
           <span className="mobile-only">Почему именно это?</span>
         </button>
         <button
           className="button button--secondary"
-          disabled
-          title="Выполнение будет подключено на этапе F2"
+          disabled={completed}
+          onClick={onComplete}
           type="button"
         >
-          <span className="desktop-only">Отметить выполненным</span>
-          <span className="mobile-only">Выполнено</span>
+          <span className="desktop-only">
+            {completed ? 'Уже выполнено' : 'Отметить выполненным'}
+          </span>
+          <span className="mobile-only">{completed ? 'Уже выполнено' : 'Выполнено'}</span>
         </button>
       </div>
 
@@ -210,12 +225,12 @@ function LevelSegments({ current, required }) {
   )
 }
 
-function CriticalGaps() {
+function CriticalGaps({ gaps }) {
   return (
     <section className="card gaps-card" aria-labelledby="gaps-heading">
       <h2 id="gaps-heading">Критические пробелы</h2>
       <ul>
-        {demoDashboard.criticalGaps.map(({ current, required, skill }) => (
+        {gaps.map(({ current, required, skill }) => (
           <li key={skill}>
             <span className="gap-name">{skill}</span>
             <span className="gap-value">
@@ -229,8 +244,8 @@ function CriticalGaps() {
   )
 }
 
-function AlternateStep() {
-  const { alternateStep } = demoDashboard
+function AlternateStep({ alternateStep, onOpen }) {
+  if (!alternateStep) return null
 
   return (
     <section className="alternate-step" aria-labelledby="alternate-heading">
@@ -246,32 +261,44 @@ function AlternateStep() {
             {alternateStep.projectedLevel}
           </p>
         </div>
-        <span className="alternate-step__link" aria-disabled="true">
+        <button className="alternate-step__link" onClick={onOpen} type="button">
           Подробнее
           <ArrowRightIcon />
-        </span>
+        </button>
       </article>
     </section>
   )
 }
 
-function RecentActivity() {
+function RecentActivity({ completed }) {
+  const activity = completed
+    ? [
+        {
+          title: demoDashboard.completedActivity.title,
+          status: 'Завершено',
+          date: 'сегодня',
+          tone: 'success',
+        },
+        ...demoDashboard.recentActivity,
+      ]
+    : demoDashboard.recentActivity
+
   return (
     <section className="card activity-card" aria-labelledby="activity-heading">
       <h2 id="activity-heading">Последняя активность</h2>
       <ul>
-        {demoDashboard.recentActivity.map((activity) => (
-          <li key={activity.title}>
+        {activity.map((item) => (
+          <li key={item.title}>
             <span
-              className={`activity-card__icon activity-card__icon--${activity.tone}`}
+              className={`activity-card__icon activity-card__icon--${item.tone}`}
               aria-hidden="true"
             >
               <DocumentIcon />
             </span>
             <div>
-              <h3>{activity.title}</h3>
+              <h3>{item.title}</h3>
               <p>
-                {activity.status} · {activity.date}
+                {item.status} · {item.date}
               </p>
             </div>
           </li>
@@ -281,63 +308,131 @@ function RecentActivity() {
   )
 }
 
+function EmployeeHome({ completed, onComplete, onOpen }) {
+  const { employee, progress } = demoDashboard
+  const scenario = completed ? demoDashboard.after : demoDashboard.before
+
+  return (
+    <>
+      <header className="dashboard-intro">
+        <div className="dashboard-intro__desktop">
+          <p className="dashboard-intro__eyebrow">ВАШ КАРЬЕРНЫЙ ПУТЬ</p>
+          <h1>{employee.firstName}, ваш следующий шаг</h1>
+          <p className="dashboard-intro__subtitle">
+            {employee.role} · {employee.currentGrade} → {employee.targetGrade}
+          </p>
+        </div>
+        <div className="dashboard-intro__mobile">
+          <p>{employee.fullName}</p>
+          <h1>{employee.role}</h1>
+          <p>
+            {employee.currentGrade} → {employee.targetGrade}
+          </p>
+        </div>
+      </header>
+      <ProgressCard progress={progress} />
+      <div className="dashboard-grid">
+        <div className="dashboard-grid__primary">
+          <RecommendationCard
+            completed={completed}
+            onComplete={onComplete}
+            onOpen={onOpen}
+            recommendation={scenario.recommendation}
+          />
+          <AlternateStep alternateStep={scenario.alternateStep} onOpen={onOpen} />
+        </div>
+        <div className="dashboard-grid__secondary">
+          <CriticalGaps gaps={scenario.criticalGaps} />
+          <RecentActivity completed={completed} />
+        </div>
+      </div>
+      <p className="content-demo-label">Демо-данные</p>
+    </>
+  )
+}
+
 function App() {
-  const { employee } = demoDashboard
+  const [screen, setScreen] = useState('login')
+  const [completed, setCompleted] = useState(false)
+  const employeeZone = screen === 'home' || screen === 'detail' || screen === 'completion'
+  const hrZone = screen === 'hr'
+
+  function completeActivity() {
+    setCompleted(true)
+    setScreen('completion')
+  }
+
+  if (screen === 'login') {
+    return (
+      <LoginScreen
+        onEmployee={() => setScreen('home')}
+        onHr={() => setScreen('hr')}
+        onImport={() => setScreen('import')}
+      />
+    )
+  }
+
+  if (screen === 'import') {
+    return (
+      <ImportScreen
+        onBack={() => setScreen('login')}
+        onGenerate={() => setScreen('home')}
+      />
+    )
+  }
+
+  const person = hrZone ? demoDashboard.hr : demoDashboard.employee
+  const navigation = hrZone ? hrNavigation : employeeNavigation
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <Brand />
-        <Navigation />
+        <p className="sidebar-zone">{hrZone ? 'HR-ЗОНА' : 'СОТРУДНИК'}</p>
+        <Navigation
+          activeId={employeeZone ? 'home' : screen}
+          items={navigation}
+          onSelect={setScreen}
+        />
         <p className="sidebar__demo-label">
           Демо-данные
           <span>Концепция</span>
         </p>
       </aside>
-
       <div className="page-shell">
         <header className="topbar">
           <div className="topbar__mobile-brand">
             <Brand />
           </div>
-          <UserIdentity showName />
+          <UserIdentity person={person} showName />
         </header>
-
         <main className="dashboard" id="main-content">
-          <header className="dashboard-intro">
-            <div className="dashboard-intro__desktop">
-              <p className="dashboard-intro__eyebrow">ВАШ КАРЬЕРНЫЙ ПУТЬ</p>
-              <h1>{employee.firstName}, ваш следующий шаг</h1>
-              <p className="dashboard-intro__subtitle">
-                {employee.role} · {employee.currentGrade} → {employee.targetGrade}
-              </p>
-            </div>
-            <div className="dashboard-intro__mobile">
-              <p>{employee.fullName}</p>
-              <h1>{employee.role}</h1>
-              <p>
-                {employee.currentGrade} → {employee.targetGrade}
-              </p>
-            </div>
-          </header>
-
-          <ProgressCard />
-
-          <div className="dashboard-grid">
-            <div className="dashboard-grid__primary">
-              <RecommendationCard />
-              <AlternateStep />
-            </div>
-            <div className="dashboard-grid__secondary">
-              <CriticalGaps />
-              <RecentActivity />
-            </div>
-          </div>
-          <p className="content-demo-label">Демо-данные</p>
+          {screen === 'home' && (
+            <EmployeeHome
+              completed={completed}
+              onComplete={completeActivity}
+              onOpen={() => setScreen('detail')}
+            />
+          )}
+          {screen === 'detail' && (
+            <DetailScreen
+              completed={completed}
+              onBack={() => setScreen('home')}
+              onComplete={completeActivity}
+            />
+          )}
+          {screen === 'completion' && (
+            <CompletionScreen onHome={() => setScreen('home')} />
+          )}
+          {screen === 'hr' && <HrScreen onImport={() => setScreen('import')} />}
         </main>
       </div>
-
-      <Navigation mobile />
+      <Navigation
+        activeId={employeeZone ? 'home' : screen}
+        items={navigation}
+        mobile
+        onSelect={setScreen}
+      />
     </div>
   )
 }

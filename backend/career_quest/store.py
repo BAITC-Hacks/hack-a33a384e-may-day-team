@@ -153,9 +153,28 @@ class PostgresStore:
             return build_candidates(self._state(session, employee_id))
 
     def recommendations(self, employee_id: str) -> dict[str, object]:
-        facts = self.candidates(employee_id)
+        with self.session_factory() as session:
+            state = self._state(session, employee_id)
+            facts = build_candidates(state)
+            profile = build_profile(state)
         return select_recommendations(
             facts,
+            context={
+                "role": profile["role"],
+                "grade": profile["grade"],
+                "primary_target": profile["primary_target"],
+                "requirements_met_count": profile["requirements_met_count"],
+                "requirements_total": profile["requirements_total"],
+                "requirement_gaps": [
+                    {
+                        "skill_id": item["skill_id"],
+                        "missing_level": item["missing_level"],
+                        "critical": item["critical"],
+                    }
+                    for item in profile["requirements"]
+                    if item["missing_level"] > 0
+                ],
+            },
             api_key=self.settings.openai_api_key,
             model=self.settings.openai_model,
             timeout_seconds=self.settings.openai_timeout_seconds,

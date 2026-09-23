@@ -2,7 +2,7 @@
 
 Updated: 2026-09-23
 
-Current milestone: backend M2.1B — PostgreSQL проверен, контракт API уточнён
+Current milestone: M2.2 — grounded AI recommendations
 
 ## Goal
 
@@ -41,8 +41,9 @@ PostgreSQL: 14.24. Python: 3.12.7. Python 3.10: NOT TESTED.
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Результат при `DATABASE_URL` на `career_quest_test`: `35 passed`, skipped
-PostgreSQL-тестов нет. Пять интеграционных тестов заменяют прежние заглушки:
+Результат M2.1B при `DATABASE_URL` на `career_quest_test`: `35 passed`, skipped
+PostgreSQL-тестов нет. Полный pytest M2.2 на том же подключении: `42 passed`,
+0 skipped. Пять интеграционных тестов заменяют прежние заглушки:
 вход и права, сохранение и idempotency, два параллельных completion, одна
 scheduled-сессия `EV_036`, атомарный импорт.
 
@@ -63,9 +64,15 @@ PostgreSQL → accounts, sessions, employees, history, idempotency
 HTTP API → auth, employee workflow, HR overview/import
 ```
 
-OpenAI выбирает 1–3 занятия только из допустимых фактов. Живой вызов для одного
-сотрудника вернул `used_ai=true`, модель `gpt-4o-mini`. Неверный `event_id`
-в тестах даёт `fallback`. Frontend выполняется отдельно и здесь не проверялся.
+M2.2 считает навыки и eligibility на сервере. OpenAI получает только роль, грейд,
+цель и допустимые candidate facts, без имени, отдела, руководителя и сырой
+истории. Live smoke на синтетическом профиле: модель `gpt-5.6-terra`,
+`used_ai=true`, latency 7883 мс, 3 ID из candidate set, по 4 фактора, latency
+ниже 10 секунд. Mock-тесты покрывают чужой ID, дубли, больше трёх ответов,
+нехватку факторов, timeout, ошибку провайдера, отсутствие ключа и стабильный
+fallback. Это не утверждение, что выбор модели всегда лучший. Frontend не
+проверялся. PostgreSQL-проверки M2.1B сохранены: 5 интеграционных тестов снова
+прошли, схема не менялась.
 
 ## Changed files
 
@@ -128,5 +135,6 @@ REPO VERIFY: PENDING — commit после push ожидает независи�
 
 ## Next
 
-Соединить проверенный backend с отдельным frontend и настроить полный запуск.
-Ключ OpenAI лежит только в локальном `.env`.
+Следующий этап: соединить frontend и backend, затем deploy и финальный README.
+Ключ OpenAI лежит только в локальном `.env`. База этой ветки для M2.2 —
+`3840c66`, поверх неё уже был commit AI-черновика `ba7e5ef`.

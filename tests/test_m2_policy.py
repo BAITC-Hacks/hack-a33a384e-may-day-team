@@ -76,6 +76,16 @@ class PolicyStore:
     def candidates(self, employee_id: str) -> dict[str, object]:
         return build_candidates(self._state(employee_id))
 
+    def recommendations(self, employee_id: str) -> dict[str, object]:
+        from backend.career_quest.ai_select import select_recommendations
+
+        return select_recommendations(
+            self.candidates(employee_id),
+            api_key=None,
+            model="gpt-5.6-terra",
+            timeout_seconds=7,
+        )
+
     def employees(self) -> list[dict[str, object]]:
         return [
             {
@@ -210,6 +220,7 @@ def test_employee_boundaries_csrf_and_role_spoofing(
     login = _login(client, "employee.a")
     csrf = login.json()["csrf_token"]
     assert client.get("/api/employees/LEAD-custom").status_code == 404
+    assert client.get("/api/employees/LEAD-custom/recommendations").status_code == 404
     assert (
         client.post(
             "/api/employees/LEAD-custom/activities/EV_USEFUL/complete",

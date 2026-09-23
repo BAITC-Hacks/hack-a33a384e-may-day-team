@@ -80,7 +80,7 @@ def load_settings() -> Settings:
             "configuration_error",
             "SESSION_TTL_HOURS must be positive.",
         )
-    timeout_text = os.environ.get("OPENAI_TIMEOUT_SECONDS", "8")
+    timeout_text = os.environ.get("OPENAI_TIMEOUT_SECONDS", "7")
     try:
         timeout = float(timeout_text)
     except ValueError as exc:
@@ -104,7 +104,7 @@ def load_settings() -> Settings:
         session_ttl_hours=ttl,
         demo_accounts=_demo_accounts(),
         openai_api_key=os.environ.get("OPENAI_API_KEY") or None,
-        openai_model=os.environ.get("OPENAI_MODEL") or "gpt-4o-mini",
+        openai_model=os.environ.get("OPENAI_MODEL") or "gpt-5.6-terra",
         openai_timeout_seconds=timeout,
     )
 

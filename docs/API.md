@@ -1,8 +1,8 @@
-# Career Quest API — M2.1
+# Career Quest API — M2.2
 
 Технический контракт backend. Frontend в этом этапе не изменялся.
 Отметка выполнения моделирует завершение в прототипе и не подтверждает обучение
-во внешней системе. AI не подключён.
+во внешней системе. AI выбирает только из серверных candidate facts.
 
 Базовый URL локального backend: `http://127.0.0.1:8000`.
 
@@ -124,32 +124,53 @@ Employee получает только свой ID. HR получает любо
 
 Порядок массива не является AI-рекомендацией и не выбирает первые три элемента.
 
-`GET /api/employees/{employee_id}/recommendations` выбирает 1–3 занятия только
-из этого списка. Модель не присылает уровни и не создаёт активности. Сервер
-оставляет каталожные `title`, `format` и `upcoming_sessions`.
+`GET /api/employees/{employee_id}/recommendations` — выбор 1–3 из того же списка.
+Цифры и каталог копируются с серверного кандидата. Текст модели — только
+`reasoning_summary`, `factor_types`, `tradeoff` и `comparison.summary`.
 
 ```json
 {
   "used_ai": true,
-  "selection_status": "selected",
+  "selection_status": "ai_ranked",
+  "model": "gpt-5.6-terra",
+  "latency_ms": 1200,
   "fallback_reason": null,
-  "model": "gpt-4o-mini",
-  "candidate_status": "candidates_available",
   "recommendations": [{
     "event_id": "EV_EXAMPLE",
     "title": "Synthetic activity",
+    "type": "course",
     "format": "offline",
+    "duration_hours": 2,
     "upcoming_sessions": ["2026-01-20"],
-    "why": "Закрывает критический разрыв.",
-    "alternative_event_id": "EV_OTHER",
-    "why_not_alternative": "Слабее закрывает тот же разрыв."
-  }]
+    "target": {"role": "Engineer", "grade": "Middle"},
+    "gaps": [],
+    "critical_gaps": ["S_ARCH"],
+    "potential_skill_changes": [],
+    "participation": {"event_status_counts": {}},
+    "reasoning_summary": "Закрывает критический разрыв следующего грейда.",
+    "factor_types": ["grade", "skill_gap", "participation_history", "next_level_requirements"],
+    "tradeoff": "Сильнее второй активности по критическому разрыву."
+  }],
+  "comparison": {
+    "chosen_event": {"event_id": "EV_EXAMPLE"},
+    "alternative_event": {"event_id": "EV_OTHER"},
+    "summary": "Первая сильнее закрывает критический разрыв."
+  }
 }
 ```
 
-Если ответа нет или в нём чужой `event_id`, результат явный:
-`used_ai=false`, `selection_status=fallback`, `recommendations=[]`.
-Пустой список кандидатов не вызывает модель: `selection_status=not_applicable`.
+`comparison` равен `null`, если допустим только один кандидат. При двух и более
+`chosen_event` — рекомендация с rank 1, `alternative_event` — другой кандидат
+из того же списка.
+
+Сбой модели не отдаёт 500. Ответ тот же формы, но `used_ai=false`,
+`selection_status=fallback_ranked`, а `fallback_reason` — один из
+`missing_api_key`, `timeout`, `provider_error`, `invalid_ai_output`.
+Порядок fallback прозрачный и не является AI-оценкой: больше критических
+разрывов, больше суммарный прирост по целевым навыкам, больше затронутых
+целевых разрывов, меньше `no_show` + `declined` + `dropped`, затем `event_id`.
+Пустой список кандидатов не вызывает модель: `selection_status=not_applicable`,
+`recommendations=[]`.
 
 ## Выполнение
 
